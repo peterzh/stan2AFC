@@ -1,4 +1,4 @@
-*.csv
-*.R
-*.hpp
-
+*.mat
+*.m~
+bin/*
+.DS_Store
