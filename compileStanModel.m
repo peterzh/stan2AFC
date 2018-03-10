@@ -9,7 +9,7 @@ function compileStanModel(stanFile)
     copyfile(fullfile(baseDir,stanFile), fullfile(binDir,stanFile));
     
     %Compile model
-    sm = StanModel('file',fullfile(binDir,stanFile));
+    sm = StanModel('file',fullfile(binDir,stanFile),'working_dir',tempdir);
     sm.compile();
     
     %Save copy of stanmodel object
