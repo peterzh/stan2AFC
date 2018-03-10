@@ -10,5 +10,5 @@ parameters {
 }
 model {
   //likelihood
-  choiceR ~ bernoulli_logit( bias + sens*(contrast_right - contrast_left)) );
+  choiceR ~ bernoulli_logit( bias + sens*(contrast_right - contrast_left) );
 }
