@@ -1,12 +1,14 @@
 #Ignore all
 *
 
-#Unignore all .m files
-!*.m
+#Unignore all with extensions
+!*.*
 
-#Unignore models folder
-!*/models/*.stan
+#Unignore all directories
+!*/
 
-#Unignore readme file
-!README.md
-
+#Ignore misc files
+*.m~
+*.DS_Store
+*.mat
+*.hpp
