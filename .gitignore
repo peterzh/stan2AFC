@@ -1,3 +1,12 @@
+#Ignore all
 *
+
+#Unignore all .m files
 !*.m
-!*.stan
+
+#Unignore models folder
+!*/models/*.stan
+
+#Unignore readme file
+!README.md
+
