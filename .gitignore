@@ -1,4 +1,3 @@
-*.mat
-*.m~
-bin/*
-.DS_Store
+*
+!*.m
+!*.stan
