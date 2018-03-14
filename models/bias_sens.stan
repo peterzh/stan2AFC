@@ -12,3 +12,6 @@ model {
   //likelihood
   choiceR ~ bernoulli_logit( bias + sens*(contrast_right - contrast_left) );
 }
+
+//Z function(s):
+//@(p,contrast_left,contrast_right) p(1) + p(2).*(contrast_right - contrast_left)

@@ -15,3 +15,5 @@ model {
   for (n in 1:N)
     choiceR[n] ~ bernoulli_logit( bias + sens_left*(contrast_left[n]^n_exp) + sens_right*(contrast_right[n]^n_exp) );
 }
+//Z function(s):
+//@(p,contrast_left,contrast_right) p(1) + p(2).*(contrast_left.^p(4)) + p(3).*(contrast_right.^p(4))
