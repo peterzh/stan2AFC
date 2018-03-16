@@ -14,4 +14,4 @@ model {
 }
 
 //Z function(s):
-//@(p,contrast_left,contrast_right) p(1) + p(2).*(contrast_right - contrast_left)
+//@(p,contrast_left,contrast_right) p.bias + p.sens.*(contrast_right - contrast_left)
