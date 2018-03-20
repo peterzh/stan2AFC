@@ -14,4 +14,4 @@ model {
   choiceR ~ bernoulli_logit( bias + sens_left*contrast_left + sens_right*contrast_right );
 }
 //Z function(s):
-//@(p,contrast_left,contrast_right) p(1) + p(2).*contrast_left + p(3).*contrast_right
+//@(p,contrast_left,contrast_right) p.bias + p.sens_left.*contrast_left + p.sens_right.*contrast_right
