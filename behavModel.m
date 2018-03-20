@@ -53,8 +53,8 @@ classdef behavModel < handle
             obj.stanModelObj = sm;
             obj.z = z;
             
-%             obj.getMAP;
-%             obj.getPosterior;
+            obj.getMAP;
+            obj.getPosterior;
         end
         
         function simulateAndFit
@@ -87,28 +87,29 @@ classdef behavModel < handle
             obj.Posterior = p;
         end
         
-        function plot(obj)
+        function plotPosterior(obj)
             
-            if ~isempty(obj.Posterior)
-                %                 error('posterior not estimated');
-                p = obj.Posterior;
-                pNames = fieldnames(obj.Posterior);
-                
-                %Plot posterior distribution
-                figure('color','w');
-                [S,AX,BigAx,H,HAx] = plotmatrix(struct2array(p),'k.');
-                set(AX,'box','off');
-                set(HAx,'box','off');
-                set(H,'DisplayStyle','stairs');
-                delete(AX(find(triu(ones(length(pNames)),1))));
-                
-                for param = 1:length(pNames)
-                    xlabel(AX(end,param),pNames{param},'interpreter','none');
-                    ylabel(AX(param,1),pNames{param},'interpreter','none');
-                end
+            %             if ~isempty(obj.Posterior)
+            %                 error('posterior not estimated');
+            p = obj.Posterior;
+            pNames = fieldnames(obj.Posterior);
+            
+            %Plot posterior distribution
+            figure('color','w');
+            [S,AX,BigAx,H,HAx] = plotmatrix(struct2array(p),'k.');
+            set(AX,'box','off');
+            set(HAx,'box','off');
+            set(H,'DisplayStyle','stairs');
+            delete(AX(find(triu(ones(length(pNames)),1))));
+            
+            for param = 1:length(pNames)
+                xlabel(AX(end,param),pNames{param},'interpreter','none');
+                ylabel(AX(param,1),pNames{param},'interpreter','none');
             end
-            
-            
+        end
+        
+        function plotPsych(obj)
+            p = obj.Posterior;
             cDiff = obj.data.contrast_right - obj.data.contrast_left;
             %Plot data
             figure('color','w');
@@ -123,11 +124,33 @@ classdef behavModel < handle
             title(sprintf('N=%d',obj.data.N));
             
             
-            
             %Plot psychometric fit
+            cEval = [linspace(1,0,1000)' zeros(1000,1); zeros(1000,1)  linspace(0,1,1000)'];
+            numIter = length(p.bias);
+            pR = nan(numIter, 2000);
+            for iter = 1:numIter
+                pSet = structfun(@(f) f(iter), p, 'uni', 0);
+                zSet = obj.z{1}(pSet, cEval(:,1), cEval(:,2));
+                pR(iter,:) = 1./(1+exp(-zSet));
+            end
+            bounds = quantile(pR,[0.025 0.975]);
+            cDiff = cEval(:,2) - cEval(:,1);
             
+            fx = fill( [cDiff; flipud(cDiff)], [bounds(2,:) fliplr( bounds(1,:) ) ], 'k');
+            fx.FaceAlpha = 0.2;
+            
+            
+            %Now draw MAP estimate
+            zSet = obj.z{1}(obj.MAP, cEval(:,1), cEval(:,2));
+            pR = 1./(1+exp(-zSet));
+            plot(cDiff, pR, 'k--');
         end
+        
+        
+        
+        
     end
+    
     
     
 end
