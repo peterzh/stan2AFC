@@ -13,26 +13,14 @@ parameters {
 	
 	vector[numSessions] bias_delta_perSession; // bias adjustment parameter for each session
 	real<lower=0> bias_delta_perSession_sd; // SD of bias adjustment values across sessions
-	
-	vector[numSessions] sens_delta_perSession; // sens adjustment parameter for each session
-	real<lower=0> sens_delta_perSession_sd; // SD of sens adjustment values across sessions
 
 }
 model {
-	real b;
-	real s;
-	real z;
-	
+
     bias_delta_perSession ~ normal(0, bias_delta_perSession_sd);
-    sens_delta_perSession ~ normal(0, sens_delta_perSession_sd);
 	
-    for (n in 1:numTrials)
-    {
-		b = bias + bias_delta_perSession[sessionID[n]];
-		s = sens + sens_delta_perSession[sessionID[n]];
-        z = b + s*(contrast_right[n] - contrast_left[n]);
-        choiceR[n] ~ bernoulli_logit(z);
-    }
+	choiceR ~ bernoulli_logit( bias + bias_delta_perSession[sessionID] + sens*(contrast_right - contrast_left) );
+	
 }
 //Z function(s):
 //@(p,contrast_left,contrast_right) p.bias + p.sens.*(contrast_right - contrast_left)
