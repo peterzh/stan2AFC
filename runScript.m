@@ -1,22 +1,27 @@
 
-%Get 2AFC detection behaviour
-sessions = fetch(d.Session & 'project_id LIKE "%2AFC%"' & 'num_trials>200');
+%Get 2AFC detection sessions from one mouse
+sessions = d.Session & 'stimulus_type="Detection"' & 'choice_type="2AFC"' & 'performance>0.7';
+sessions = proj(sessions,'CONCAT(session_date,"_",session_num,"_",mouse_name)->expRef');
+trials = (d.Trial * d.TrialStim * d.TrialResponse) * sessions;
+[mouse_name,expRef, contrast_left, contrast_right, response] = fetchn( trials, 'mouse_name', 'expRef', 'contrast_left', 'contrast_right', 'response');
+response(response==1)=0;
+response(response==2)=1;
+    
+[~,~,sessionID] = unique(expRef);
+[~,~,subjID] = unique(mouse_name);
 
-for s = 1:length(sessions)
-    trials = d.Trial & sessions(s);
-    [contrast_left, contrast_right] = fetchn( trials * d.TrialStim, 'contrast_left', 'contrast_right');
-    [response] = fetchn( trials * d.TrialResponse, 'response');
-    
-    %Change response coding 0=Left, 1=Right
-    response(response==1)=0;
-    response(response==2)=1;
-    
-    data = struct('N',length(response),'contrast_left',contrast_left,...
-                    'contrast_right',contrast_right,'choiceR',response);
-    
-    b = behavModel(data,'bias_sensL_sensR_exponentL_exponentR');
-    b.plotPosterior;
-    b.plotPsych;
-    drawnow;
-end
+data = struct('numTrials',length(response),...
+              'numSubjects', max(subjID),...
+              'numSessions', max(sessionID),...
+              'contrast_left', contrast_left,...
+              'contrast_right', contrast_right,...
+              'choiceR', response,...
+              'sessionID', sessionID,...
+              'subjID', subjID);
 
+b = behavModel(data,'hier_bias_sens');
+b.getPosterior;
+b.plotPosteriorMarginals;
+% b.plotPosterior;
+% b.plotPsych;
+drawnow;
