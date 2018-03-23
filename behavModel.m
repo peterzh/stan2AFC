@@ -53,8 +53,8 @@ classdef behavModel < handle
             obj.stanModelObj = sm;
             obj.z = z;
             
-            obj.getMAP;
-            obj.getPosterior;
+%             obj.getMAP;
+%             obj.getPosterior;
         end
         
         function simulateAndFit
@@ -68,7 +68,7 @@ classdef behavModel < handle
             fitObj.block;
             
             %Output MAP parameter values
-            p = fitObj.extract;
+            p = fitObj.extract('permuted',false);
             p = rmfield(p, 'lp__');
             obj.MAP = p;
             
@@ -87,133 +87,131 @@ classdef behavModel < handle
             obj.Posterior = p;
         end
         
-        function plotPosterior(obj)
+        function plotFullPosterior(obj)
+            
+            %             if ~isempty(obj.Posterior)
+            %                 error('posterior not estimated');
+            p = obj.Posterior;
+            p = struct2array(p);
+            pNames = fieldnames(obj.Posterior);
+            numVars = structfun(@(f) size(f,2), obj.Posterior);
+            %Expand the param labels if any variable in the posterior
+            %struct is more than 1D
+            pNames_expanded = pNames;
+            for param = 1:length(numVars)
+                pNames_expanded{param} = repmat(pNames(param),numVars(param),1);
+            end
+            pNames_expanded = cat(1,pNames_expanded{:});
+            
+            %Plot posterior distribution
+            figure('color','w');
+            [S,AX,BigAx,H,HAx] = plotmatrix(p,'k.');
+            set(AX,'box','off');
+            set(HAx,'box','off');
+            set(H,'DisplayStyle','stairs');
+            delete(AX(find(triu(ones(length(pNames_expanded)),1))));
+            
+            for param = 1:length(pNames_expanded)
+                xlabel(AX(end,param),pNames_expanded{param},'interpreter','none');
+                ylabel(AX(param,1),pNames_expanded{param},'interpreter','none');
+            end
+        end
+        
+        function plotPosteriorMarginals(obj)
             
             %             if ~isempty(obj.Posterior)
             %                 error('posterior not estimated');
             p = obj.Posterior;
             pNames = fieldnames(obj.Posterior);
             
-            %Plot posterior distribution
             figure('color','w');
-            [S,AX,BigAx,H,HAx] = plotmatrix(struct2array(p),'k.');
-            set(AX,'box','off');
-            set(HAx,'box','off');
-            set(H,'DisplayStyle','stairs');
-            delete(AX(find(triu(ones(length(pNames)),1))));
-            
             for param = 1:length(pNames)
-                xlabel(AX(end,param),pNames{param},'interpreter','none');
-                ylabel(AX(param,1),pNames{param},'interpreter','none');
+                ha = subplot(length(pNames),1, param);
+
+                temp = p.(pNames{param});
+                
+                hold(ha,'on');
+                for var = 1:size(temp,2)
+                    histogram( ha, temp(:,var),...
+                        'DisplayStyle','stairs');
+                end
+                title(ha, pNames{param}, 'interpreter', 'none');
             end
+            
         end
         
         function plotPsych(obj)
+            %Plot per-session curves (+data) and then the grand average
+            %curves (no data)
             p = obj.Posterior;
             
             fig = figure('color','w');
-            ha = tight_subplot(4,2,0.05,[0.05 0.05],[0.05 0.01]);
-            set(ha([1 3 5 7]),'dataaspectratio',[1 1 1],'xlim',[0 1],'ylim',[0 1]);
-            set(ha,'xcolor','none','ycolor','none');
             
-            cont = [obj.data.contrast_left obj.data.contrast_right];
-            resp = obj.data.choiceR;
-            %                 cVals = unique(cont(:));
-            cVals = unique(min(cont,[],2));
+            numPlots = obj.data.numSessions+1;
             
-            if length(cVals)>4
-                %Take top 4 instead
-                tab=tabulate(min(cont,[],2));
-                tab=sortrows(tab,3,'descend');
-                cVals = tab(1:4,1);
-                cVals = sort(cVals);
-                %                     keyboard;
-            end
-            
-            numPedestals = length(cVals);
-            cols = [0 0.4470 0.7410;
-                0.8500 0.3250 0.0980;
-                0.4940    0.1840    0.5560];
-            
-            set(ha,'xlim',[-1 1]*(max(cont(:))+0.1),'ylim',[0 1]);
-            
-            for ped = 1:numPedestals
+            for sess = 1:obj.data.numSessions
+                subplot( ceil(sqrt(numPlots)) , ceil(sqrt(numPlots)), sess);
+                hold on; set(gca,'box','off','xlim',[-1 1],'ylim',[0 1]);
                 
-                %Add cartoon on the left of the contrast conditions
-                %plotted
-                ha_cartoon = ha( 2*(ped-1) + 1);
-                ped_idx = min(cont,[],2)==cVals(ped);
-                ped_c = unique(cont(ped_idx,:),'rows');
-                
-                plot(ha_cartoon, ped_c(:,2), ped_c(:,1), 'k.','markersize',15);
-                set(ha_cartoon,'dataaspectratio',[1 1 1],'xlim',[0 max(cont(:))+0.1],'ylim',[0 max(cont(:))+0.1],'box','off');
-                set(ha_cartoon,'ytick',unique(ped_c(:)),'xtick',unique(ped_c(:)));
-                
-                ha_ped = [ ha(2*(ped-1) + 2) ];
-                set(ha_ped(1),'yticklabelmode','auto','ycolor','k');
-                if ped == numPedestals
-                    set(ha_ped,'xticklabelmode','auto','xcolor','k');
-                end
-                
-                hold(ha_ped(1),'on');
-                set(ha_ped,'colororder',cols);
-                
-                %Plot actual datapoints
-                ped_idx = min(cont,[],2)==cVals(ped);
-                ped_c_diff = diff(cont(ped_idx,:),[],2);
-                ped_r = resp(ped_idx);
-                uC = unique(ped_c_diff);
+                sessIdx = obj.data.sessionID == sess;
+                %Plot data
+                cont = [obj.data.contrast_left(sessIdx) obj.data.contrast_right(sessIdx)];
+                contDiff = cont(:,2) - cont(:,1);
+                resp = obj.data.choiceR(sessIdx);
+                cVals = unique(contDiff);
                 ph=[];
-                for c = 1:length(uC)
-                    r = ped_r(ped_c_diff==uC(c));
+                for c = 1:length(cVals)
+                    r = resp(contDiff == cVals(c));
                     [ph(c,:),pci] = binofit(sum(r==1,1),length(r));
-                    l(1)=line(ha_ped(1),[1 1]*uC(c),pci);
-                    set(l,'Color',cols(2,:),'Linewidth',0.5);
-
+                    l(1)=line(gca,[1 1]*cVals(c),pci);
+                    set(l,'Color',[1 1 1]*0.5,'Linewidth',0.5);
                 end
-%                 set(ha(ped),'ColorOrderIndex',1);
-                    plot(ha_ped(1),uC,ph,'.','markersize',15,'color',cols(2,:));
-
+                plot(cVals,ph,'.','markersize',15,'color',[1 1 1]*0.5);
                 
-                %Plot predictions
-                cEval = [linspace(max(abs(uC))+0.1,0,1000)' zeros(1000,1); zeros(1000,1) linspace(0,max(abs(uC))+0.1,1000)'] + cVals(ped);
+                
+                %Plot model prediction
+                cEval = [linspace(1,0,1000)' zeros(1000,1); zeros(1000,1) linspace(0,1,1000)'];
                 numIter = length(p.bias);
                 pR = nan(numIter, 2000);
                 for iter = 1:numIter
-                    pSet = structfun(@(f) f(iter), p, 'uni', 0);
-                    zSet = obj.z{1}(pSet, cEval(:,1), cEval(:,2));
+                    pSet = structfun(@(f) f(iter,:), p, 'uni', 0);
+                    
+                    pSetSess = struct;
+                    pSetSess.bias = pSet.bias + pSet.bias_delta_perSession(sess);
+                    pSetSess.sens = pSet.sens + pSet.sens_delta_perSession(sess);
+                    zSet = obj.z{1}(pSetSess, cEval(:,1), cEval(:,2));
                     pR(iter,:) = 1./(1+exp(-zSet));
                 end
                 bounds = quantile(pR,[0.025 0.975]);
                 cDiff = cEval(:,2) - cEval(:,1);
                 %
-                fx = fill(ha_ped(1), [cDiff; flipud(cDiff)], [bounds(2,:) fliplr( bounds(1,:) ) ], 'k');
+                fx = fill([cDiff; flipud(cDiff)], [bounds(2,:) fliplr( bounds(1,:) ) ], 'k');
                 fx.FaceAlpha = 0.2;
                 
-                zSet = obj.z{1}(obj.MAP, cEval(:,1), cEval(:,2));
-                pR = 1./(1+exp(-zSet));
-                plot(ha_ped(1),cDiff, pR, 'k--');
-                
-                
-                
-%                 p_hat = obj.calculatePhat(obj.parameterFits,testCont);
-%                 set(gca,'ColorOrderIndex',1);
-%                 for ch=1:3
-%                     plot(ha_ped(ch),diff(testCont,[],2),p_hat(:,ch),'linewidth',1,'color',cols(ch,:));
-%                 end
-%                 
-
-                
-                if ped==1
-                    title(ha_ped(1),'pRight');
-                end
-                
-                
-                
+%                 zSet = obj.z{1}(obj.MAP, cEval(:,1), cEval(:,2));
+%                 pR = 1./(1+exp(-zSet));
+%                 plot(ha_ped(1),cDiff, pR, 'k--');
             end
             
-%             set(get(fig,'children'),'fontsize',6);
             
+            %Now plot grand avg
+            subplot( ceil(sqrt(numPlots)) , ceil(sqrt(numPlots)), numPlots);
+            
+            pR = nan(numIter, 2000);
+            for iter = 1:numIter
+                pSet = structfun(@(f) f(iter,:), p, 'uni', 0);
+                
+                pSetSess = struct;
+                pSetSess.bias = pSet.bias ;
+                pSetSess.sens = pSet.sens ;
+                zSet = obj.z{1}(pSetSess, cEval(:,1), cEval(:,2));
+                pR(iter,:) = 1./(1+exp(-zSet));
+            end
+            bounds = quantile(pR,[0.025 0.975]);
+            cDiff = cEval(:,2) - cEval(:,1);
+            %
+            fx = fill([cDiff; flipud(cDiff)], [bounds(2,:) fliplr( bounds(1,:) ) ], 'k');
+            fx.FaceAlpha = 0.2;
             
             
         end
