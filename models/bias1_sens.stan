@@ -16,10 +16,14 @@ parameters {
 
 }
 model {
-
+	vector[numTrials] B;
+	vector[numTrials] C;
+	
     bias_delta_perSession ~ normal(0, bias_delta_perSession_sd);
 	
-	choiceR ~ bernoulli_logit( bias + bias_delta_perSession[sessionID] + sens*(contrast_right - contrast_left) );
+	B = bias + bias_delta_perSession[sessionID]; // grand mean bias + per-session bias deviations
+	C = contrast_right - contrast_left; // contrast difference on each trial
+	choiceR ~ bernoulli_logit( B + sens*C );
 	
 }
 //Z function(s):

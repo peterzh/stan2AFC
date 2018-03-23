@@ -26,22 +26,21 @@ parameters {
 	real<lower=0> sens_delta_perSession_sd; // SD of bias adjustment values across sessions
 }
 model {
-	real b;
-	real s;
-	real z;
-	
-    bias_delta_perSubject ~ normal(0, bias_delta_perSubject_sd);
+
+	vector[numTrials] B;
+	vector[numTrials] S;
+	vector[numTrials] C;
+
+	bias_delta_perSubject ~ normal(0, bias_delta_perSubject_sd);
     bias_delta_perSession ~ normal(0, bias_delta_perSession_sd);
 	sens_delta_perSubject ~ normal(0, sens_delta_perSubject_sd);
     sens_delta_perSession ~ normal(0, sens_delta_perSession_sd);
 	
-    for (n in 1:numTrials)
-    {
-		b = bias + bias_delta_perSubject[subjID[n]] + bias_delta_perSession[sessionID[n]];
-		s = sens + sens_delta_perSubject[subjID[n]] + sens_delta_perSession[sessionID[n]];
-        z = b + s*(contrast_right[n] - contrast_left[n]);
-        choiceR[n] ~ bernoulli_logit(z);
-    }
+	B = bias + bias_delta_perSubject[subjID] + bias_delta_perSession[sessionID];
+	S = sens + sens_delta_perSubject[subjID] + sens_delta_perSession[sessionID];
+	C = contrast_right - contrast_left; // contrast difference on each trial
+	choiceR ~ bernoulli_logit( B + rows_dot_product(S,C) );
+	
 }
 //Z function(s):
 //@(p,contrast_left,contrast_right) p.bias + p.sens.*(contrast_right - contrast_left)
