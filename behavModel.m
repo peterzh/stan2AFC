@@ -89,6 +89,18 @@ classdef behavModel < handle
             obj.Posterior = p;
         end
         
+        function p = getPosterior_Variational(obj)
+            %Fit model on data
+            fitObj = stan('fit',obj.stanModelObj,'method','variational','data',obj.data,'iter',1000,'chains',4,'verbose',true);
+            fitObj.block;
+            
+            %Get all parameter values
+            p = fitObj.extract;
+            fields = fieldnames(p);
+            p = rmfield(p, fields(contains(fields,'__')));
+            obj.Posterior = p;
+        end
+        
         function plotFullPosterior(obj)
             
             %             if ~isempty(obj.Posterior)
