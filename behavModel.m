@@ -54,9 +54,7 @@ classdef behavModel < handle
             %Store stanModel object in local behavModel object
             obj.stanModelObj = sm;
             obj.z = z;
-            
-%             obj.getMAP;
-%             obj.getPosterior;
+ 
         end
         
         function simulateAndFit
@@ -83,7 +81,7 @@ classdef behavModel < handle
             fitObj.block;
             
             %Get all parameter values
-            p = fitObj.extract;
+            p = fitObj.extract('permuted',false);
             fields = fieldnames(p);
             p = rmfield(p, fields(contains(fields,'__')));
             obj.Posterior = p;
@@ -95,7 +93,7 @@ classdef behavModel < handle
             fitObj.block;
             
             %Get all parameter values
-            p = fitObj.extract;
+            p = fitObj.extract('permuted',false);
             fields = fieldnames(p);
             p = rmfield(p, fields(contains(fields,'__')));
             obj.Posterior = p;
