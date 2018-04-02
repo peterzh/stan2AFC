@@ -1,8 +1,12 @@
 data {
-    int<lower=0> N; // number of observations
-    vector[N] contrast_left;
-    vector[N] contrast_right;
-    int<lower=0,upper=1> choiceR[N];
+    int<lower=1> numTrials;
+	int<lower=1> numSessions; 
+	int<lower=1> numSubjects;
+	int<lower=1,upper=numSessions> sessionID[numTrials];
+	int<lower=1,upper=numSubjects> subjectID[numTrials];
+	vector<lower=0,upper=1>[numTrials] contrastLeft;
+    vector<lower=0,upper=1>[numTrials] contrastRight;
+	int<lower=0,upper=1> choiceR[numTrials]; // 0=Left, 1=Right
 }
 parameters {
     real bias; // bias parameter
@@ -10,8 +14,8 @@ parameters {
 }
 model {
   //likelihood
-  choiceR ~ bernoulli_logit( bias + sens*(contrast_right - contrast_left) );
+  choiceR ~ bernoulli_logit( bias + sens*(contrastRight - contrastLeft) );
 }
 
 //Z function(s):
-//@(p,contrast_left,contrast_right) p.bias + p.sens.*(contrast_right - contrast_left)
+//@(p,contrastLeft,contrastRight) p.bias + p.sens.*(contrastRight - contrastLeft)

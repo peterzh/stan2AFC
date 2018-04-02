@@ -34,6 +34,8 @@ classdef behavModel < handle
                 
                 %Compile model
                 sm = StanModel('file',stanFile,'working_dir',tempdir);
+%                 sm = StanModel('file',stanFile,'working_dir',fileparts(stanFile));
+%                 sm.compile('model','STANCFLAGS =include_paths C:\Users\Peter\Documents\MATLAB\stan2AFC\models');
                 sm.compile();
                 
                 %Read Z function from the stan file as well
@@ -157,12 +159,12 @@ classdef behavModel < handle
                 %Plot data
                 cont = [obj.data.contrast_left(sessIdx) obj.data.contrast_right(sessIdx)];
                 contDiff = cont(:,2) - cont(:,1);
-                resp = obj.data.choiceR(sessIdx);
+                resp = obj.data.choice(sessIdx);
                 cVals = unique(contDiff);
                 ph=[];
                 for c = 1:length(cVals)
                     r = resp(contDiff == cVals(c));
-                    [ph(c,:),pci] = binofit(sum(r==1,1),length(r));
+                    [ph(c,:),pci] = binofit(sum(r==2,1),length(r));
                     l(1)=line(gca,[1 1]*cVals(c),pci);
                     set(l,'Color',[1 1 1]*0.5,'Linewidth',0.5);
                 end
