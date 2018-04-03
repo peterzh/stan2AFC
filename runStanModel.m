@@ -34,7 +34,12 @@ data = struct('numTrials',length(response),...
               'choice', response,...
               'sessionID', sessionID,...
               'subjectID', subjID);
-          
+  
+%% Add test contrasts
+data.numTestContrasts = 1000;
+data.testContrastLeft = [linspace(1,0,data.numTestContrasts/2)'; zeros(data.numTestContrasts/2,1)];
+data.testContrastRight = [zeros(data.numTestContrasts/2,1); linspace(0,1,data.numTestContrasts/2)'];
+
 
 %% Load model
 b = behavModel(data,'bias_sens');

@@ -32,6 +32,12 @@ classdef behavModel < handle
                 %Get stan model file
                 stanFile = strrep(modelFile, '.mat', '.stan');
                 
+                %Create symbolic link to ensure compiler finds the #include
+                %headers
+                [~,~]=system(['ln -s ' models_dir '/standard_data_blocks_2AFC.stan'  ' ' mstan.stan_home '/standard_data_blocks_2AFC.stan']);
+                [~,~]=system(['ln -s ' models_dir '/standard_data_blocks_2AUC.stan'  ' ' mstan.stan_home '/standard_data_blocks_2AUC.stan']);
+
+                               
                 %Compile model
                 sm = StanModel('file',stanFile,'working_dir',tempdir);
 %                 sm = StanModel('file',stanFile,'working_dir',fileparts(stanFile));
