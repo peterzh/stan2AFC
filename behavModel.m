@@ -9,6 +9,8 @@ classdef behavModel < handle
         z;
         MAP;
         Posterior;
+        PosteriorType;
+        data_stan;
     end
     
     methods
@@ -60,7 +62,16 @@ classdef behavModel < handle
             %Store stanModel object in local behavModel object
             obj.stanModelObj = sm;
             obj.z = z;
- 
+            
+            %Convert data structure to stan data format
+            obj.data_stan = obj.data;
+            obj.data_stan.numTrials = length(obj.data.choiceR);
+            obj.data_stan.numSubjects = max(obj.data.subjectID);
+            obj.data_stan.numSessions = max(obj.data.sessionID);
+            obj.data_stan.numTestContrasts = 1000;
+            obj.data_stan.testContrastLeft = [linspace(1,0,obj.data_stan.numTestContrasts/2)'; zeros(obj.data_stan.numTestContrasts/2,1)];
+            obj.data_stan.testContrastRight = [zeros(obj.data_stan.numTestContrasts/2,1); linspace(0,1,obj.data_stan.numTestContrasts/2)'];
+            
         end
         
         function simulateAndFit
@@ -70,7 +81,7 @@ classdef behavModel < handle
         
         function p = getMAP(obj)
             %Get maximum a-posteriori estimate of parameters
-            fitObj = stan('fit',obj.stanModelObj,'method','optimize','data',obj.data,'verbose',true);
+            fitObj = stan('fit',obj.stanModelObj,'method','optimize','data',obj.data_stan,'verbose',true);
             fitObj.block;
             
             %Output MAP parameter values
@@ -83,26 +94,28 @@ classdef behavModel < handle
         function p = getPosterior(obj)
             
             %Fit model on data
-            fitObj = stan('fit',obj.stanModelObj,'method','sample','data',obj.data,'iter',1000,'chains',4,'verbose',true);
+            fitObj = stan('fit',obj.stanModelObj,'method','sample','data',obj.data_stan,'iter',1000,'chains',4,'verbose',true);
             fitObj.block;
             
             %Get all parameter values
-            p = fitObj.extract('permuted',false);
+            p = fitObj.extract;
             fields = fieldnames(p);
             p = rmfield(p, fields(contains(fields,'__')));
             obj.Posterior = p;
+            obj.PosteriorType = 'HMC';
         end
         
         function p = getPosterior_Variational(obj)
             %Fit model on data
-            fitObj = stan('fit',obj.stanModelObj,'method','variational','data',obj.data,'iter',1000,'chains',4,'verbose',true);
+            fitObj = stan('fit',obj.stanModelObj,'method','variational','data',obj.data_stan,'iter',1000,'chains',4,'verbose',true);
             fitObj.block;
             
             %Get all parameter values
-            p = fitObj.extract('permuted',false);
+            p = fitObj.extract;
             fields = fieldnames(p);
             p = rmfield(p, fields(contains(fields,'__')));
             obj.Posterior = p;
+            obj.PosteriorType = 'Variational';
         end
         
         function plotFullPosterior(obj)
