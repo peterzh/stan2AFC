@@ -14,5 +14,12 @@ model {
 
 	choiceR ~ bernoulli_logit( z );
 }
-//Z function(s):
-//@(p,contrastLeft,contrastRight) p.bias + p.sens_left.*(contrastLeft.^p.n_exp) + p.sens_right.*(contrastRight.^p.n_exp)
+generated quantities {
+  vector[numTestContrasts] zTest;
+  vector[numTestContrasts] pRTest;
+  for (c in 1:numTestContrasts)
+	{
+		zTest[c] = bias + sens_left*(testContrastLeft[c]^n_exp) + sens_right*(testContrastRight[c]^n_exp) ;
+	}
+  pRTest = exp(zTest)./(1+exp(zTest));
+}
