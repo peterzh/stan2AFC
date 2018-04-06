@@ -38,12 +38,11 @@ classdef behavModel < handle
                 %headers
                 [~,~]=system(['ln -s ' models_dir '/standard_data_blocks_2AFC.stan'  ' ' mstan.stan_home '/standard_data_blocks_2AFC.stan']);
                 [~,~]=system(['ln -s ' models_dir '/standard_data_blocks_2AUC.stan'  ' ' mstan.stan_home '/standard_data_blocks_2AUC.stan']);
-
-                               
+                
                 %Compile model
                 sm = StanModel('file',stanFile,'working_dir',tempdir);
-%                 sm = StanModel('file',stanFile,'working_dir',fileparts(stanFile));
-%                 sm.compile('model','STANCFLAGS =include_paths C:\Users\Peter\Documents\MATLAB\stan2AFC\models');
+                %                 sm = StanModel('file',stanFile,'working_dir',fileparts(stanFile));
+                %                 sm.compile('model','STANCFLAGS =include_paths C:\Users\Peter\Documents\MATLAB\stan2AFC\models');
                 sm.compile();
                 
                 %Read Z function from the stan file as well
@@ -154,11 +153,12 @@ classdef behavModel < handle
             %                 error('posterior not estimated');
             p = obj.Posterior;
             pNames = fieldnames(obj.Posterior);
+            pNames(end-1:end)=[]; %Remove zTest and pRTest variables
             
             figure('color','w');
             for param = 1:length(pNames)
                 ha = subplot(length(pNames),1, param);
-
+                
                 temp = p.(pNames{param});
                 
                 hold(ha,'on');
@@ -172,81 +172,181 @@ classdef behavModel < handle
         end
         
         function plotPsych(obj)
-            %Plot per-session curves (+data) and then the grand average
-            %curves (no data)
+            %Plot psychometric data/curves. Plotting depends on the model
+            %hierarchy type
+            
+            posterior_credible_intervals = [0.025 0.975];
+            
+            if isfield(obj.data_stan,'choice')
+                error('Plotting not coded for 2AUC data');
+            end
+            
             p = obj.Posterior;
+            m = obj.MAP;
             
-            fig = figure('color','w');
+            if ~isempty(p)
+                fprintf('Posterior estimation: %s\n',obj.PosteriorType);
+            end
             
-            numPlots = obj.data.numSessions+1;
+            %Different plots depending on the hierarchy type
+            %Non-hierarchical model
+            if contains(obj.modelName,'2')
+                hier = 2;
+            elseif contains(obj.modelName,'1')
+                hier = 1;
+            else
+                hier = 0;
+            end
             
-            for sess = 1:obj.data.numSessions
-                subplot( ceil(sqrt(numPlots)) , ceil(sqrt(numPlots)), sess);
-                hold on; set(gca,'box','off','xlim',[-1 1],'ylim',[0 1]);
-                
-                sessIdx = obj.data.sessionID == sess;
-                %Plot data
-                cont = [obj.data.contrast_left(sessIdx) obj.data.contrast_right(sessIdx)];
-                contDiff = cont(:,2) - cont(:,1);
-                resp = obj.data.choice(sessIdx);
-                cVals = unique(contDiff);
-                ph=[];
-                for c = 1:length(cVals)
-                    r = resp(contDiff == cVals(c));
-                    [ph(c,:),pci] = binofit(sum(r==2,1),length(r));
-                    l(1)=line(gca,[1 1]*cVals(c),pci);
-                    set(l,'Color',[1 1 1]*0.5,'Linewidth',0.5);
-                end
-                plot(cVals,ph,'.','markersize',15,'color',[1 1 1]*0.5);
-                
-                
-                %Plot model prediction
-                cEval = [linspace(1,0,1000)' zeros(1000,1); zeros(1000,1) linspace(0,1,1000)'];
-                numIter = length(p.bias);
-                pR = nan(numIter, 2000);
-                for iter = 1:numIter
-                    pSet = structfun(@(f) f(iter,:), p, 'uni', 0);
+            switch(hier)
+                case 0 %No hierarchy, just fit all data in a single model
+                    ps = []; ms = [];
+                    if ~isempty(p)
+                        ps = quantile(p.pRTest,posterior_credible_intervals,1);
+                        fprintf('Posterior estimation: %s\n',obj.PosteriorType);
+                    end
                     
-                    pSetSess = struct;
-                    pSetSess.bias = pSet.bias + pSet.bias_delta_perSession(sess);
-                    pSetSess.sens = pSet.sens + pSet.sens_delta_perSession(sess);
-                    zSet = obj.z{1}(pSetSess, cEval(:,1), cEval(:,2));
-                    pR(iter,:) = 1./(1+exp(-zSet));
-                end
-                bounds = quantile(pR,[0.025 0.975]);
-                cDiff = cEval(:,2) - cEval(:,1);
-                %
-                fx = fill([cDiff; flipud(cDiff)], [bounds(2,:) fliplr( bounds(1,:) ) ], 'k');
-                fx.FaceAlpha = 0.2;
-                
-%                 zSet = obj.z{1}(obj.MAP, cEval(:,1), cEval(:,2));
-%                 pR = 1./(1+exp(-zSet));
-%                 plot(ha_ped(1),cDiff, pR, 'k--');
+                    if ~isempty(m)
+                        ms = m.pRTest;
+                    end
+                    
+                    fig = figure('color','w');
+                    ha=axes;
+                    obj.util_plotSingle(ha, obj.data_stan, ps, ms);
+                    
+                case 1 %Per-session deviations
+                    %Make a plot for each session, if there aren't too many
+                    %sessions, and then make a plot for the grand average
+                                        
+                    fig = figure('color','w','units','normalized','position',[0.2131 0.0524 0.4530 0.8495]);
+                    numEdgePlots = ceil(sqrt(obj.data_stan.numSessions));
+                    for session = 1:obj.data_stan.numSessions
+                        ha = subplot(2*numEdgePlots,numEdgePlots,session);
+
+                        %Get subset data
+                        sessIdx = obj.data_stan.sessionID==session;
+                        data_subset = struct('testContrastLeft',obj.data_stan.testContrastLeft,...
+                            'testContrastRight',obj.data_stan.testContrastRight,...
+                            'contrastLeft',obj.data_stan.contrastLeft(sessIdx),...
+                            'contrastRight',obj.data_stan.contrastRight(sessIdx),...
+                            'choiceR',obj.data_stan.choiceR(sessIdx));
+                        
+                        ps = []; ms = [];
+                        if ~isempty(p)
+                            ps = quantile(squeeze(p.pRTest(:,session,:)),posterior_credible_intervals,1);
+                        end
+                        if ~isempty(m)
+                            ms = m.pRTest(session,:);
+                        end
+                        obj.util_plotSingle(ha, data_subset, ps, ms);
+                        
+                        xlabel(ha,''); ylabel(ha,'');
+%                         set(ha,'xcolor','none','ycolor','none');
+                        set(ha,'xtick','','ytick','');
+                        title(ha,sprintf('session %d',session));
+                    end
+                    
+                    %Create grand average plot
+                    ha = subplot(2,1,2);
+                    ps = []; ms = [];
+                    if ~isempty(p)
+                        ps = quantile(p.pRTestGrandAverage,posterior_credible_intervals,1);
+                    end
+                    if ~isempty(m)
+                        ms = m.pRTestGrandAverage;
+                    end
+                    obj.util_plotSingle(ha, obj.data_stan, ps, ms);
+                    title(ha,'grand average (pooled data across sessions)');
+                    
+                case 2 %Per session & per subject deviations
+                    
+                    fig = figure('color','w','units','normalized','position',[0.2131 0.0524 0.4530 0.8495]);
+                    numEdgePlots = ceil(sqrt(obj.data_stan.numSubjects));
+                    
+                    for subj = 1:obj.data_stan.numSubjects
+                        ha = subplot(2*numEdgePlots,numEdgePlots,subj);
+
+                        %Get subset data
+                        subjIdx = obj.data_stan.subjectID==subj;
+                        data_subset = struct('testContrastLeft',obj.data_stan.testContrastLeft,...
+                            'testContrastRight',obj.data_stan.testContrastRight,...
+                            'contrastLeft',obj.data_stan.contrastLeft(subjIdx),...
+                            'contrastRight',obj.data_stan.contrastRight(subjIdx),...
+                            'choiceR',obj.data_stan.choiceR(subjIdx));
+                        
+                        ps = []; ms = [];
+                        if ~isempty(p)
+                            keyboard;
+                            ps = quantile(p.pRTestSubjectAverage(subj,:),posterior_credible_intervals,1);
+                        end
+                        
+                        if ~isempty(m)
+                            ms = m.pRTestSubjectAverage(subj,:);
+                        end
+                        obj.util_plotSingle(ha, data_subset, ps, ms);
+                        xlabel(ha,''); ylabel(ha,'');
+                        set(ha,'xcolor','none','ycolor','none');
+                        title(ha,sprintf('subject %d',subj));
+                    end
+                    
+                    %Create grand average plot
+                    ha = subplot(2,1,2);
+                    ps = []; ms = [];
+                    if ~isempty(p)
+                        ps = quantile(p.pRTestGrandAverage,posterior_credible_intervals,1);
+                    end
+                    if ~isempty(m)
+                        ms = m.pRTestGrandAverage;
+                    end
+                    obj.util_plotSingle(ha, obj.data_stan, ps, ms);
+                    title(ha,'grand average');
+                    
             end
-            
-            
-            %Now plot grand avg
-            subplot( ceil(sqrt(numPlots)) , ceil(sqrt(numPlots)), numPlots);
-            
-            pR = nan(numIter, 2000);
-            for iter = 1:numIter
-                pSet = structfun(@(f) f(iter,:), p, 'uni', 0);
-                
-                pSetSess = struct;
-                pSetSess.bias = pSet.bias ;
-                pSetSess.sens = pSet.sens ;
-                zSet = obj.z{1}(pSetSess, cEval(:,1), cEval(:,2));
-                pR(iter,:) = 1./(1+exp(-zSet));
-            end
-            bounds = quantile(pR,[0.025 0.975]);
-            cDiff = cEval(:,2) - cEval(:,1);
-            %
-            fx = fill([cDiff; flipud(cDiff)], [bounds(2,:) fliplr( bounds(1,:) ) ], 'k');
-            fx.FaceAlpha = 0.2;
-            
+
             
         end
         
+        
+        function util_plotSingle(~,axis_handle, dataStruct, PosteriorPrediction, MAPPrediction)
+            hold(axis_handle,'on');
+            
+            cDiff = dataStruct.testContrastRight - dataStruct.testContrastLeft;
+            %Plot posterior prediction
+            if ~isempty(PosteriorPrediction)
+                fx = fill(axis_handle,[cDiff; flipud(cDiff)], [PosteriorPrediction(2,:) fliplr( PosteriorPrediction(1,:) ) ], 'k');
+                fx.EdgeAlpha=0;
+                fx.FaceColor = [1 1 1]*0.8;
+            end
+            
+            %Plot MAP prediction
+            if ~isempty(MAPPrediction)
+                mx=plot(axis_handle,cDiff, MAPPrediction, 'k--');
+            end
+            
+            %Plot data
+            cDiffData = dataStruct.contrastRight - dataStruct.contrastLeft;
+            cVals = unique(cDiffData);
+            ph=[];
+            for c = 1:length(cVals)
+                r = dataStruct.choiceR(cDiffData == cVals(c));
+                [ph(c),pci] = binofit(sum(r==1,1),length(r));
+                l(1)=line(axis_handle,[1 1]*cVals(c),pci);
+                set(l,'Color',[1 1 1]*0,'Linewidth',0.5);
+                plot(axis_handle,cVals(c),ph(c),'.','markersize',20,'color',[1 1 1]*0);
+            end
+            
+            set(axis_handle,'xlim',[-1 1],'ylim',[0 1]);
+            ylabel(axis_handle,'pR');
+            xlabel(axis_handle,'CR - CL');
+            %
+            %             if ~isempty(PosteriorPrediction) && ~isempty(MAPPrediction)
+            %                 lx = legend([fx,mx],{obj.PosteriorType,'MAP'},'Location','SouthEast');
+            %                 lx.Box='off';
+            %             end
+            %
+            hold(axis_handle,'off');
+            set(axis_handle,'dataaspectratio',[1 1 1]);
+        end
         
         
         
