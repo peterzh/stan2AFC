@@ -102,6 +102,17 @@ classdef behavModel < handle
             p = rmfield(p, fields(contains(fields,'__')));
             obj.Posterior = p;
             obj.PosteriorType = 'HMC';
+            
+            warning('TODO: Assess convergence');
+            
+%             %Print parameter summaries
+%             f = fieldnames(p);
+%             params = f(~contains(f,'Test'));
+%             for prm = 1:length(params)
+%                 dat = p.(params{prm});
+%                 fprintf('%s :: mean %.3f :: 2.5%% %.3f :: 97.5%% %.3f\n',params{prm}, mean(dat), quantile(dat,0.025), quantile(dat,0.975))
+%             end
+%             keyboard;
         end
         
         function p = getPosterior_Variational(obj)
