@@ -90,29 +90,31 @@ classdef behavModel < handle
             
         end
         
-        function p = getPosterior(obj)
+        function [p1,waic] = getPosterior(obj)
             
             %Fit model on data
             fitObj = stan('fit',obj.stanModelObj,'method','sample','data',obj.data_stan,'iter',1000,'chains',4,'verbose',true);
             fitObj.block;
-            
+                        
             %Get all parameter values
-            p = fitObj.extract;
+            p = fitObj.extract('permuted',false);
+            
+            %Convert to scalar struct
             fields = fieldnames(p);
-            p = rmfield(p, fields(contains(fields,'__')));
-            obj.Posterior = p;
+            p1 = p(1);
+            for i = 1:length(fields)
+                p1.(fields{i}) = cat(1,p.(fields{i}));
+            end
+            
+            p1 = rmfield(p1, fields(contains(fields,'__')));
+            obj.Posterior = p1;
             obj.PosteriorType = 'HMC';
             
             warning('TODO: Assess convergence');
-            
-%             %Print parameter summaries
-%             f = fieldnames(p);
-%             params = f(~contains(f,'Test'));
-%             for prm = 1:length(params)
-%                 dat = p.(params{prm});
-%                 fprintf('%s :: mean %.3f :: 2.5%% %.3f :: 97.5%% %.3f\n',params{prm}, mean(dat), quantile(dat,0.025), quantile(dat,0.975))
-%             end
-%             keyboard;
+%             [str,tab] = fitObj.print();
+
+            waic=mstan.waic(p1.log_lik);
+
         end
         
         function p = getPosterior_Variational(obj)
@@ -121,7 +123,7 @@ classdef behavModel < handle
             fitObj.block;
             
             %Get all parameter values
-            p = fitObj.extract;
+            p = fitObj.extract('permuted',false);
             fields = fieldnames(p);
             p = rmfield(p, fields(contains(fields,'__')));
             obj.Posterior = p;
@@ -221,7 +223,7 @@ classdef behavModel < handle
                         ms = m.pRTest;
                     end
                     
-                    fig = figure('color','w');
+                    fig = figure('color','w','name',obj.modelName);
                     ha=axes;
                     obj.util_plotSingle(ha, obj.data_stan, ps, ms);
                     
@@ -229,7 +231,7 @@ classdef behavModel < handle
                     %Make a plot for each session, if there aren't too many
                     %sessions, and then make a plot for the grand average
                                         
-                    fig = figure('color','w','units','normalized','position',[0.2131 0.0524 0.4530 0.8495]);
+                    fig = figure('color','w','units','normalized','position',[0.2131 0.0524 0.4530 0.8495],'name',obj.modelName);
                     numEdgePlots = ceil(sqrt(obj.data_stan.numSessions));
                     for session = 1:obj.data_stan.numSessions
                         ha = subplot(2*numEdgePlots,numEdgePlots,session);
@@ -271,7 +273,7 @@ classdef behavModel < handle
                     
                 case 2 %Per session & per subject deviations
                     
-                    fig = figure('color','w','units','normalized','position',[0.2131 0.0524 0.4530 0.8495]);
+                    fig = figure('color','w','units','normalized','position',[0.2131 0.0524 0.4530 0.8495],'name',obj.modelName);
                     numEdgePlots = ceil(sqrt(obj.data_stan.numSubjects));
                     
                     for subj = 1:obj.data_stan.numSubjects
@@ -287,8 +289,7 @@ classdef behavModel < handle
                         
                         ps = []; ms = [];
                         if ~isempty(p)
-                            keyboard;
-                            ps = quantile(p.pRTestSubjectAverage(subj,:),posterior_credible_intervals,1);
+                            ps = quantile(squeeze(p.pRTestSubjectAverage(:,subj,:)),posterior_credible_intervals,1);
                         end
                         
                         if ~isempty(m)
