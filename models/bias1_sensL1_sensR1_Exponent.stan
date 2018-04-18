@@ -17,18 +17,27 @@ parameters {
     real<upper=0> sens_left;
     real<lower=0> sens_right;
     real<lower=0,upper=2> n_exp; //n exponent
-    vector[numSessions] bias_delta_perSession; // bias adjustment parameter for each session
+    
+	vector[numSessions] bias_delta_perSession; // bias adjustment parameter for each session
   	real<lower=0> bias_delta_perSession_sd; // SD of bias adjustment values across sessions
+	
+	vector[numSessions] sens_left_delta_perSession; // bias adjustment parameter for each session
+  	real<lower=0> sens_left_delta_perSession_sd; // SD of bias adjustment values across sessions
+	
+	vector[numSessions] sens_right_delta_perSession; // bias adjustment parameter for each session
+  	real<lower=0> sens_right_delta_perSession_sd; // SD of bias adjustment values across sessions
 }
 transformed parameters {
   vector[numTrials] z;
   for (n in 1:numTrials)
 	{
-    z[n] = bias + bias_delta_perSession[sessionID[n]] + sens_left*contrastLeft[n]^n_exp + sens_right*contrastRight[n]^n_exp ;
+    z[n] = bias + bias_delta_perSession[sessionID[n]] + (sens_left + sens_left_delta_perSession[sessionID[n]])*contrastLeft[n]^n_exp + (sens_right + sens_right_delta_perSession[sessionID[n]])*contrastRight[n]^n_exp ;
 	}
 }
 model {
   bias_delta_perSession ~ normal(0, bias_delta_perSession_sd);
+  sens_left_delta_perSession ~ normal(0, sens_left_delta_perSession_sd);
+  sens_right_delta_perSession ~ normal(0, sens_right_delta_perSession_sd);
   choiceR ~ bernoulli_logit( z );
 }
 generated quantities {
@@ -48,7 +57,7 @@ generated quantities {
 
   for (sess in 1:numSessions)
   {
-    zTest[sess] = bias + bias_delta_perSession[sess] + sens_left*testContrastLeftTransformed + sens_right*testContrastRightTransformed;
+    zTest[sess] = bias + bias_delta_perSession[sess] + (sens_left + sens_left_delta_perSession[sess])*testContrastLeftTransformed + (sens_right + sens_right_delta_perSession[sess])*testContrastRightTransformed;
     pRTest[sess] = exp(zTest[sess])./(1+exp(zTest[sess]));
   }
 

@@ -1,15 +1,14 @@
 classdef behavModel < handle
-    properties
+    properties(Access=public)
         modelName;
-        data;
+        data;        
+        MAP;
+        Posterior;
+        PosteriorType;
     end
     
     properties(Access=public)
         stanModelObj;
-        z;
-        MAP;
-        Posterior;
-        PosteriorType;
         data_stan;
     end
     
@@ -25,7 +24,7 @@ classdef behavModel < handle
             modelFile = fullfile(models_dir, [modelName '.mat']);
             
             if exist( modelFile, 'file')
-                load(modelFile,'sm','z');
+                load(modelFile,'sm');
                 fprintf('Loaded model %s\n', modelName);
                 
             else %If it doesn't exist, compile and save it
@@ -34,33 +33,19 @@ classdef behavModel < handle
                 %Get stan model file
                 stanFile = strrep(modelFile, '.mat', '.stan');
                 
-                %Create symbolic link to ensure compiler finds the #include
-                %headers
-                [~,~]=system(['ln -s ' models_dir '/standard_data_blocks_2AFC.stan'  ' ' mstan.stan_home '/standard_data_blocks_2AFC.stan']);
-                [~,~]=system(['ln -s ' models_dir '/standard_data_blocks_2AUC.stan'  ' ' mstan.stan_home '/standard_data_blocks_2AUC.stan']);
-                
                 %Compile model
                 sm = StanModel('file',stanFile,'working_dir',tempdir);
                 %                 sm = StanModel('file',stanFile,'working_dir',fileparts(stanFile));
                 %                 sm.compile('model','STANCFLAGS =include_paths C:\Users\Peter\Documents\MATLAB\stan2AFC\models');
                 sm.compile();
                 
-                %Read Z function from the stan file as well
-                c = textread(stanFile,'%c')';
-                zIdx = strfind(c,'//@');
-                
-                z = {};
-                for i = 1:length(zIdx)
-                    z{i} = eval( c( (2+zIdx(i)):end ) );
-                end
                 
                 %Save copy of compiled model .mat object
-                save(modelFile,'sm','z');
+                save(modelFile,'sm');
             end
             
             %Store stanModel object in local behavModel object
             obj.stanModelObj = sm;
-            obj.z = z;
             
             %Convert data structure to stan data format
             obj.data_stan = obj.data;
@@ -166,21 +151,24 @@ classdef behavModel < handle
             %                 error('posterior not estimated');
             p = obj.Posterior;
             pNames = fieldnames(obj.Posterior);
-            pNames(end-1:end)=[]; %Remove zTest and pRTest variables
+            pNames(find(strcmp(pNames,'z')):end)=[];
             
             figure('color','w');
+            ha = tight_subplot( ceil(length(pNames)/3), 3, 0.05, 0.05, 0.05);
             for param = 1:length(pNames)
-                ha = subplot(length(pNames),1, param);
+%                 ha = subplot(length(pNames),1, param);
                 
                 temp = p.(pNames{param});
                 
-                hold(ha,'on');
+                hold(ha(param),'on');
                 for var = 1:size(temp,2)
-                    histogram( ha, temp(:,var),...
+                    histogram( ha(param), temp(:,var),...
                         'DisplayStyle','stairs');
                 end
-                title(ha, pNames{param}, 'interpreter', 'none');
+                title(ha(param), pNames{param}, 'interpreter', 'none');
             end
+            set(ha,'XTickLabelMode','auto');
+            delete(ha(param+1:end));
             
         end
         
@@ -233,8 +221,9 @@ classdef behavModel < handle
                                         
                     fig = figure('color','w','units','normalized','position',[0.2131 0.0524 0.4530 0.8495],'name',obj.modelName);
                     numEdgePlots = ceil(sqrt(obj.data_stan.numSessions));
+                    ha = tight_subplot( numEdgePlots, numEdgePlots, 0.02, [0.4 0.03], 0.01);
                     for session = 1:obj.data_stan.numSessions
-                        ha = subplot(2*numEdgePlots,numEdgePlots,session);
+%                         ha = subplot(2*numEdgePlots,numEdgePlots,session);
 
                         %Get subset data
                         sessIdx = obj.data_stan.sessionID==session;
@@ -251,16 +240,17 @@ classdef behavModel < handle
                         if ~isempty(m)
                             ms = m.pRTest(session,:);
                         end
-                        obj.util_plotSingle(ha, data_subset, ps, ms);
+                        obj.util_plotSingle(ha(session), data_subset, ps, ms);
                         
-                        xlabel(ha,''); ylabel(ha,'');
+                        xlabel(ha(session),''); ylabel(ha(session),'');
 %                         set(ha,'xcolor','none','ycolor','none');
-                        set(ha,'xtick','','ytick','');
-                        title(ha,sprintf('session %d',session));
+                        set(ha(session),'xtick','','ytick','');
+                        title(ha(session),sprintf('session %d',session));
                     end
+                    delete(ha(session+1:end))
                     
                     %Create grand average plot
-                    ha = subplot(2,1,2);
+                    ha = tight_subplot( 1, 1, 0.01, [0.05 0.6], 0.1);
                     ps = []; ms = [];
                     if ~isempty(p)
                         ps = quantile(p.pRTestGrandAverage,posterior_credible_intervals,1);
@@ -357,7 +347,7 @@ classdef behavModel < handle
             %             end
             %
             hold(axis_handle,'off');
-            set(axis_handle,'dataaspectratio',[1 1 1]);
+%             set(axis_handle,'dataaspectratio',[1 1 1]);
         end
         
         
