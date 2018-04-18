@@ -14,6 +14,10 @@ data = struct('contrastLeft', contrast_left,...
               'sessionID', sessionID,...
               'subjectID', subjID);
           
+data2 = getrow(data, data.subjectID==12);
+[~,~,data2.sessionID]=unique(data2.sessionID);
+[~,~,data2.subjectID]=unique(data2.subjectID);
+          
           
 %% get 2AUC data
 sessions = d.Session & 'choice_type="2AUC"' & 'performance>0.7';
