@@ -57,12 +57,7 @@ classdef behavModel < handle
             obj.data_stan.testContrastRight = [zeros(obj.data_stan.numTestContrasts/2,1); linspace(0,1,obj.data_stan.numTestContrasts/2)'];
             
         end
-        
-        function simulateAndFit
-            %Simulate data and fit model
-            error('todo');
-        end
-        
+
         function p = getMAP(obj)
             %Get maximum a-posteriori estimate of parameters
             fitObj = stan('fit',obj.stanModelObj,'method','optimize','data',obj.data_stan,'verbose',true);
@@ -72,11 +67,9 @@ classdef behavModel < handle
             p = fitObj.extract('permuted',false);
             p = rmfield(p, 'lp__');
             obj.MAP = p;
-            
         end
         
         function [p1,waic] = getPosterior(obj)
-            
             %Fit model on data
             fitObj = stan('fit',obj.stanModelObj,'method','sample','data',obj.data_stan,'iter',1000,'chains',4,'verbose',true);
             fitObj.block;
@@ -96,8 +89,6 @@ classdef behavModel < handle
             obj.PosteriorType = 'HMC';
             
             warning('TODO: Assess convergence');
-%             [str,tab] = fitObj.print();
-
             waic=mstan.waic(p1.log_lik);
 
         end
@@ -314,13 +305,13 @@ classdef behavModel < handle
         end
         
         
-        function util_plotSingle(~,axis_handle, dataStruct, PosteriorPrediction, MAPPrediction)
+        function util_plotSingle(~,axis_handle, dataStruct, PosteriorPredictionIntervals, MAPPrediction)
             hold(axis_handle,'on');
             
             cDiff = dataStruct.testContrastRight - dataStruct.testContrastLeft;
             %Plot posterior prediction
-            if ~isempty(PosteriorPrediction)
-                fx = fill(axis_handle,[cDiff; flipud(cDiff)], [PosteriorPrediction(2,:) fliplr( PosteriorPrediction(1,:) ) ], 'k');
+            if ~isempty(PosteriorPredictionIntervals)
+                fx = fill(axis_handle,[cDiff; flipud(cDiff)], [PosteriorPredictionIntervals(2,:) fliplr( PosteriorPredictionIntervals(1,:) ) ], 'k');
                 fx.EdgeAlpha=0;
                 fx.FaceColor = [1 1 1]*0.8;
             end
@@ -345,12 +336,7 @@ classdef behavModel < handle
             set(axis_handle,'xlim',[-1 1],'ylim',[0 1]);
             ylabel(axis_handle,'pR');
             xlabel(axis_handle,'CR - CL');
-            %
-            %             if ~isempty(PosteriorPrediction) && ~isempty(MAPPrediction)
-            %                 lx = legend([fx,mx],{obj.PosteriorType,'MAP'},'Location','SouthEast');
-            %                 lx.Box='off';
-            %             end
-            %
+ \
             hold(axis_handle,'off');
 %             set(axis_handle,'dataaspectratio',[1 1 1]);
         end
