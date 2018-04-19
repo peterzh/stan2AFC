@@ -336,7 +336,6 @@ classdef behavModel < handle
             set(axis_handle,'xlim',[-1 1],'ylim',[0 1]);
             ylabel(axis_handle,'pR');
             xlabel(axis_handle,'CR - CL');
- \
             hold(axis_handle,'off');
 %             set(axis_handle,'dataaspectratio',[1 1 1]);
         end
