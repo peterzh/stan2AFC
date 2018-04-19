@@ -115,33 +115,38 @@ classdef behavModel < handle
             obj.PosteriorType = 'Variational';
         end
         
-        function plotFullPosterior(obj)
+        function plotPosteriorFull(obj)
             
-            %             if ~isempty(obj.Posterior)
-            %                 error('posterior not estimated');
+            if isempty(obj.Posterior)
+                error('posterior not estimated');
+            end
+                        
             p = obj.Posterior;
-            p = struct2array(p);
-            pNames = fieldnames(obj.Posterior);
-            numVars = structfun(@(f) size(f,2), obj.Posterior);
+            pNames = fieldnames(p);
+            p = rmfield(p, pNames(find(strcmp(pNames,'z')):end));
+            pNames = fieldnames(p);
+            
+            
             %Expand the param labels if any variable in the posterior
             %struct is more than 1D
             pNames_expanded = pNames;
-            for param = 1:length(numVars)
-                pNames_expanded{param} = repmat(pNames(param),numVars(param),1);
+            for param = 1:length(pNames)
+                numVars = size(p.(pNames{param}),2);
+                pNames_expanded{param} = repmat(pNames(param),numVars,1);
             end
             pNames_expanded = cat(1,pNames_expanded{:});
             
             %Plot posterior distribution
             figure('color','w');
-            [S,AX,BigAx,H,HAx] = plotmatrix(p,'k.');
+            [S,AX,BigAx,H,HAx] = plotmatrix(struct2array(p),'k.');
             set(AX,'box','off');
             set(HAx,'box','off');
-            set(H,'DisplayStyle','stairs');
+            set(H,'DisplayStyle','bar', 'edgealpha', 0);
             delete(AX(find(triu(ones(length(pNames_expanded)),1))));
             
             for param = 1:length(pNames_expanded)
-                xlabel(AX(end,param),pNames_expanded{param},'interpreter','none');
-                ylabel(AX(param,1),pNames_expanded{param},'interpreter','none');
+                xlabel(AX(end,param),pNames_expanded{param},'interpreter','none', 'Rotation', 45);
+                ylabel(AX(param,1),pNames_expanded{param},'interpreter','none', 'Rotation', 45);
             end
         end
         
@@ -163,7 +168,7 @@ classdef behavModel < handle
                 hold(ha(param),'on');
                 for var = 1:size(temp,2)
                     histogram( ha(param), temp(:,var),...
-                        'DisplayStyle','stairs');
+                        'DisplayStyle','bar', 'edgealpha', 0);
                 end
                 title(ha(param), pNames{param}, 'interpreter', 'none');
             end
