@@ -1,16 +1,15 @@
 data {
-  int<lower=1> numTrials;
+	int<lower=1> numTrials;
 	int<lower=1> numSessions;
 	int<lower=1> numSubjects;
 	int<lower=1,upper=numSessions> sessionID[numTrials];
 	int<lower=1,upper=numSubjects> subjectID[numTrials];
 	vector<lower=0,upper=1>[numTrials] contrastLeft;
-  vector<lower=0,upper=1>[numTrials] contrastRight;
-	int<lower=0,upper=1> choiceR[numTrials]; // 0=Left, 1=Right
-
-  int<lower=0> numTestContrasts; //Number of query contrast points
-  vector<lower=0,upper=1>[numTestContrasts] testContrastLeft;
-  vector<lower=0,upper=1>[numTestContrasts] testContrastRight;
+	vector<lower=0,upper=1>[numTrials] contrastRight;
+	int<lower=0,upper=1> choice[numTrials]; // 0=Left, 1=Right
+	int<lower=0> numTestContrasts; //Number of query contrast points
+	vector<lower=0,upper=1>[numTestContrasts] testContrastLeft;
+	vector<lower=0,upper=1>[numTestContrasts] testContrastRight;
 }
 parameters {
   real bias; // grand bias parameter (avg over all subjects and all sessions)
@@ -42,7 +41,7 @@ model {
 	B = bias + bias_delta_perSubject[subjectID] + bias_delta_perSession[sessionID];
 	S = sens + sens_delta_perSubject[subjectID] + sens_delta_perSession[sessionID];
 	C = contrastRight - contrastLeft; // contrast difference on each trial
-	choiceR ~ bernoulli_logit( B + rows_dot_product(S,C) );
+	choice ~ bernoulli_logit( B + rows_dot_product(S,C) );
 
 }
 generated quantities {

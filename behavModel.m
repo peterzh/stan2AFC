@@ -49,13 +49,17 @@ classdef behavModel < handle
             
             %Convert data structure to stan data format
             obj.data_stan = obj.data;
-            obj.data_stan.numTrials = length(obj.data.choiceR);
+            obj.data_stan.numTrials = length(obj.data.contrastLeft);
             obj.data_stan.numSubjects = max(obj.data.subjectID);
             obj.data_stan.numSessions = max(obj.data.sessionID);
             obj.data_stan.numTestContrasts = 1000;
             obj.data_stan.testContrastLeft = [linspace(1,0,obj.data_stan.numTestContrasts/2)'; zeros(obj.data_stan.numTestContrasts/2,1)];
             obj.data_stan.testContrastRight = [zeros(obj.data_stan.numTestContrasts/2,1); linspace(0,1,obj.data_stan.numTestContrasts/2)'];
             
+            %Convert responses to [0, 1] if 2AFC, or keep as [1,2,3] for 2AUC
+            if max(obj.data_stan.choice) == 2 %if 2AFC
+                obj.data_stan.choice = obj.data_stan.choice - 1;
+            end
         end
 
         function p = getMAP(obj)
@@ -174,10 +178,6 @@ classdef behavModel < handle
             
             posterior_credible_intervals = [0.025 0.975];
             
-            if isfield(obj.data_stan,'choice')
-                error('Plotting not coded for 2AUC data');
-            end
-            
             p = obj.Posterior;
             m = obj.MAP;
             
@@ -205,6 +205,8 @@ classdef behavModel < handle
                     
                     if ~isempty(m)
                         ms = m.pRTest;
+                    else
+                        ms = mean(p.pRTest , 1);
                     end
                     
                     fig = figure('color','w','name',obj.modelName);
@@ -227,7 +229,7 @@ classdef behavModel < handle
                             'testContrastRight',obj.data_stan.testContrastRight,...
                             'contrastLeft',obj.data_stan.contrastLeft(sessIdx),...
                             'contrastRight',obj.data_stan.contrastRight(sessIdx),...
-                            'choiceR',obj.data_stan.choiceR(sessIdx));
+                            'choice',obj.data_stan.choice(sessIdx));
                         
                         ps = []; ms = [];
                         if ~isempty(p)
@@ -235,7 +237,10 @@ classdef behavModel < handle
                         end
                         if ~isempty(m)
                             ms = m.pRTest(session,:);
+                        else
+                            ms = mean(squeeze(p.pRTest(:,session,:)) , 1);
                         end
+                        
                         obj.util_plotSingle(ha(session), data_subset, ps, ms);
                         
                         xlabel(ha(session),''); ylabel(ha(session),'');
@@ -253,7 +258,10 @@ classdef behavModel < handle
                     end
                     if ~isempty(m)
                         ms = m.pRTestGrandAverage;
+                    else
+                        ms = mean(p.pRTestGrandAverage , 1);
                     end
+                    
                     obj.util_plotSingle(ha, obj.data_stan, ps, ms);
                     title(ha,'grand average (pooled data across sessions)');
                     
@@ -326,7 +334,7 @@ classdef behavModel < handle
             cVals = unique(cDiffData);
             ph=[];
             for c = 1:length(cVals)
-                r = dataStruct.choiceR(cDiffData == cVals(c));
+                r = dataStruct.choice(cDiffData == cVals(c));
                 [ph(c),pci] = binofit(sum(r==1,1),length(r));
                 l(1)=line(axis_handle,[1 1]*cVals(c),pci);
                 set(l,'Color',[1 1 1]*0,'Linewidth',0.5);
