@@ -51,5 +51,3 @@ generated quantities {
     log_lik[n] = bernoulli_logit_lpmf(choiceR[n] | z[n]);
   }
 }
-//Z function(s):
-//@(p,contrastLeft,contrastRight) p.bias + p.sens.*(contrastRight - contrastLeft)
