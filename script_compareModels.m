@@ -1,5 +1,5 @@
 
-models = {'bias1_sens1','bias1_sens','bias1_sensL_sensR_Exponent','bias1_sensL1_sensR1_Exponent'};
+models = {'bias1_sens1','bias1_sens','bias1_sensL_sensR_Exponent','bias1_sensL1_sensR1_Exponent','bias1_sensL1_sensR1_Exponent1'};
 
 figure;
 axis; hold on;
