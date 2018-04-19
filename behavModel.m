@@ -211,7 +211,7 @@ classdef behavModel < handle
                     
                     fig = figure('color','w','name',obj.modelName);
                     ha=axes;
-                    obj.util_plotSingle(ha, obj.data_stan, ps, ms);
+                    obj.util_plot2AFCDetection(ha, obj.data_stan, ps, ms);
                     
                 case 1 %Per-session deviations
                     %Make a plot for each session, if there aren't too many
@@ -241,7 +241,7 @@ classdef behavModel < handle
                             ms = mean(squeeze(p.pRTest(:,session,:)) , 1);
                         end
                         
-                        obj.util_plotSingle(ha(session), data_subset, ps, ms);
+                        obj.util_plot2AFCDetection(ha(session), data_subset, ps, ms);
                         
                         xlabel(ha(session),''); ylabel(ha(session),'');
 %                         set(ha,'xcolor','none','ycolor','none');
@@ -262,7 +262,7 @@ classdef behavModel < handle
                         ms = mean(p.pRTestGrandAverage , 1);
                     end
                     
-                    obj.util_plotSingle(ha, obj.data_stan, ps, ms);
+                    obj.util_plot2AFCDetection(ha, obj.data_stan, ps, ms);
                     title(ha,'grand average (pooled data across sessions)');
                     
                 case 2 %Per session & per subject deviations
@@ -289,7 +289,7 @@ classdef behavModel < handle
                         if ~isempty(m)
                             ms = m.pRTestSubjectAverage(subj,:);
                         end
-                        obj.util_plotSingle(ha, data_subset, ps, ms);
+                        obj.util_plot2AFCDetection(ha, data_subset, ps, ms);
                         xlabel(ha,''); ylabel(ha,'');
                         set(ha,'xcolor','none','ycolor','none');
                         title(ha,sprintf('subject %d',subj));
@@ -304,7 +304,7 @@ classdef behavModel < handle
                     if ~isempty(m)
                         ms = m.pRTestGrandAverage;
                     end
-                    obj.util_plotSingle(ha, obj.data_stan, ps, ms);
+                    obj.util_plot2AFCDetection(ha, obj.data_stan, ps, ms);
                     title(ha,'grand average');
                     
             end
@@ -313,7 +313,7 @@ classdef behavModel < handle
         end
         
         
-        function util_plotSingle(~,axis_handle, dataStruct, PosteriorPredictionIntervals, MAPPrediction)
+        function util_plot2AFCDetection(~,axis_handle, dataStruct, PosteriorPredictionIntervals, MAPPrediction)
             hold(axis_handle,'on');
             
             cDiff = dataStruct.testContrastRight - dataStruct.testContrastLeft;
