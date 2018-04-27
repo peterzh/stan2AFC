@@ -78,7 +78,3 @@ generated quantities {
     log_lik[n] = categorical_logit_lpmf(choice[n] | z[n] );
   }
 }
-/*
-<Z1> @(bias_left, sens_left, n_exp, contrastLeft) bias_left + sens_left*(contrastLeft.^n_exp) <Z1>;
-<Z2> @(bias_right, sens_right, n_exp, contrastRight) bias_right + sens_right*(contrastRight.^n_exp) <Z2>;
-*/

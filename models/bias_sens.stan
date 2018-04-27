@@ -18,28 +18,27 @@ transformed data {
 	}
 }
 parameters {
-    real bias; // bias parameter
-    real sens; // sensitivity
+	real bias; // bias parameter
+	real sens; // sensitivity
 }
 transformed parameters {
-  vector[numTrials] z;
-  z = bias + sens*(contrastRight - contrastLeft);
+	vector[numTrials] z;
+	z = bias + sens*(contrastRight - contrastLeft);
 }
 model {
-  choiceR ~ bernoulli_logit( z );
+	choiceR ~ bernoulli_logit( z );
 }
 generated quantities {
-  vector[numTestContrasts] zTest;
-  vector[numTestContrasts] pTest;
-  vector[numTrials] log_lik;
+	real zTest[numTestContrasts];
+	real pTest[numTestContrasts];
+	real log_lik[numTrials];
+	
+	for (c in 1:numTestContrasts) {
+		zTest[c] = bias + sens*(testContrastRight[c] - testContrastLeft[c]);
+		pTest[c] = exp(zTest[c])/(1 + exp(zTest[c]));
+	}
 
-  zTest = bias + sens*(testContrastRight - testContrastLeft);
-  pTest = exp(zTest)./(1+exp(zTest));
-
-  for (n in 1:numTrials){
-    log_lik[n] = bernoulli_logit_lpmf(choiceR[n] | z[n] );
-  }
+	for (n in 1:numTrials){
+		log_lik[n] = bernoulli_logit_lpmf(choiceR[n] | z[n] );
+	}
 }
-/*
-<Z1> @(bias, sens, contrastRight, contrastLeft) bias + sens*(contrastRight - contrastLeft) <Z1>;
-*/

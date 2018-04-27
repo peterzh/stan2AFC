@@ -11,7 +11,6 @@ classdef behavModel < handle
         stanModelObj;
         data_stan;
         data_type;
-        Z;
     end
     
     methods
@@ -26,7 +25,7 @@ classdef behavModel < handle
             modelFile = fullfile(models_dir, [modelName '.mat']);
             
             if exist( modelFile, 'file')
-                load(modelFile, 'sm','Z');
+                load(modelFile, 'sm');
                 fprintf('Loaded model %s\n', modelName);
                 
             else %If it doesn't exist, compile and save it
@@ -40,27 +39,16 @@ classdef behavModel < handle
                 text = textscan(fid, '%s'); text = strjoin(text{1},' ');
                 fclose(fid);
                 
-                %Try loading Z1 and Z2
-                Z = {};
-                s=strsplit(text,'<Z1>');
-                Z{1} = eval(s{2});
-                s=strsplit(text,'<Z2>');
-                try
-                    Z{2} = eval(s{2});
-                catch
-                end
-
                 %Compile model
                 sm = StanModel('file',stanFile,'working_dir',tempdir);
                 sm.compile();
                
                 %Save copy of compiled model .mat object
-                save(modelFile,'sm','Z');
+                save(modelFile,'sm');
             end
             
             %Store stanModel object in local behavModel object
             obj.stanModelObj = sm;
-            obj.Z = Z;
             
             %IDENTIFY FEATURES
             %1) Hierarchical?
@@ -96,7 +84,7 @@ classdef behavModel < handle
             %detection or discrimination
             
             if contains(obj.data_type.stimulusType,'Detection')
-                numTestContrasts = 40;
+                numTestContrasts = 500;
                 obj.data_stan.numTestContrasts = numTestContrasts;
                 obj.data_stan.testContrastLeft = [linspace(1,0,numTestContrasts/2)'; zeros(numTestContrasts/2,1)];
                 obj.data_stan.testContrastRight = [zeros(numTestContrasts/2,1); linspace(0,1,numTestContrasts/2)'];
@@ -320,8 +308,8 @@ classdef behavModel < handle
                         ps_grandAv = struct('interval', quantile(p.pTestGrandAverage,credible_interval,1),...
                             'mean', mean(p.pTestGrandAverage,1) );
                     end
-%                     obj.util_plotDetection(ha, obj.data_stan, ps_grandAv);
-                    obj.util_plotDiscrimination(ha, obj.data_stan, ps_grandAv);
+                    obj.util_plotDetection(ha, obj.data_stan, ps_grandAv);
+%                     obj.util_plotDiscrimination(ha, obj.data_stan, ps_grandAv);
                     title(ha,'grand average (pooled data across sessions)');
                     
                 otherwise %Per session & per subject deviations
