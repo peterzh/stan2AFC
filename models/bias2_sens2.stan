@@ -33,21 +33,17 @@ parameters {
 	vector[numSessions] bias_delta_perSession; // bias adjustment parameter for each session
 	real<lower=0> bias_delta_perSession_sd; // SD of bias adjustment values across sessions
 
-	vector[numSubjects] sens_delta_perSubject; // bias adjustment parameter for each subject
-	real<lower=0> sens_delta_perSubject_sd; // SD of bias adjustment values subjects
-
-	vector[numSessions] sens_delta_perSession; // bias adjustment parameter for each session
-	real<lower=0> sens_delta_perSession_sd; // SD of bias adjustment values across sessions
+	vector[numSubjects] sens_delta_perSubject; // sens adjustment parameter for each subject
+	real<lower=0> sens_delta_perSubject_sd; // SD of sens adjustment values subjects
 }
 transformed parameters {
 	vector[numTrials] z;
-	z = bias + bias_delta_perSession[sessionID] + bias_delta_perSubject[subjectID] + rows_dot_product(sens + sens_delta_perSession[sessionID] + sens_delta_perSubject[subjectID], contrastRight - contrastLeft);
+	z = bias + bias_delta_perSession[sessionID] + bias_delta_perSubject[subjectID] + rows_dot_product(sens + sens_delta_perSubject[subjectID], contrastRight - contrastLeft);
 }
 model {
 	bias_delta_perSubject ~ normal(0, bias_delta_perSubject_sd);
 	bias_delta_perSession ~ normal(0, bias_delta_perSession_sd);
 	sens_delta_perSubject ~ normal(0, sens_delta_perSubject_sd);
-	sens_delta_perSession ~ normal(0, sens_delta_perSession_sd);
 	choiceR ~ bernoulli_logit( z );
 }
 generated quantities {
@@ -62,7 +58,7 @@ generated quantities {
 	for (c in 1:numTestContrasts) {
 		for (sess in 1:numSessions)
 		{
-			zTest[c,sess] = bias + bias_delta_perSession[sess] + bias_delta_perSubject[subjectID_perSession[sess]] + (sens + sens_delta_perSession[sess] + sens_delta_perSubject[subjectID_perSession[sess]])*(testContrastRight[c] - testContrastLeft[c]);
+			zTest[c,sess] = bias + bias_delta_perSession[sess] + bias_delta_perSubject[subjectID_perSession[sess]] + (sens + sens_delta_perSubject[subjectID_perSession[sess]])*(testContrastRight[c] - testContrastLeft[c]);
 			pTest[c,sess] = exp(zTest[c,sess])./(1+exp(zTest[c,sess]));
 		}
 		
