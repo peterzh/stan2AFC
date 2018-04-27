@@ -10,6 +10,7 @@ data {
 	int<lower=0> numTestContrasts; //Number of query contrast points
 	vector<lower=0,upper=1>[numTestContrasts] testContrastLeft;
 	vector<lower=0,upper=1>[numTestContrasts] testContrastRight;
+	int<lower=0,upper=1> perturbation[numTrials];
 }
 transformed data {
 	int<lower=0,upper=1> choiceR[numTrials]; // 0=Left, 1=Right
@@ -20,21 +21,27 @@ transformed data {
 parameters {
     real bias; // bias parameter
     real sens; // sensitivity
+	real bias_perturbation;
+	real sens_perturbation;
 }
 transformed parameters {
   vector[numTrials] z;
-  z = bias + sens*(contrastRight - contrastLeft);
+  for (n in 1:numTrials)
+  {
+	if (perturbation[n] == 1) {
+		z[n] = (bias + bias_perturbation) + (sens + sens_perturbation)*(contrastRight[n] - contrastLeft[n]);
+	} else {
+		z[n] = bias + sens*(contrastRight[n] - contrastLeft[n]);
+	}
+  }
 }
 model {
-  choiceR ~ bernoulli_logit( z );
+	bias_perturbation ~ normal(0, 10); //prior on the perturbations
+	sens_perturbation ~ normal(0, 10);
+	choiceR ~ bernoulli_logit( z );
 }
 generated quantities {
-  vector[numTestContrasts] zTest;
-  vector[numTestContrasts] pTest;
   vector[numTrials] log_lik;
-
-  zTest = bias + sens*(testContrastRight - testContrastLeft);
-  pTest = exp(zTest)./(1+exp(zTest));
 
   for (n in 1:numTrials){
     log_lik[n] = bernoulli_logit_lpmf(choiceR[n] | z[n] );

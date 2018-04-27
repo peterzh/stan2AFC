@@ -52,7 +52,7 @@ data3 = struct('contrastLeft', (cDiff<0).*(-cDiff),...
               'subjectID', ones(N,1));
           
 %% Load model
-b = behavModel(data2,'bias1_sensL_sensR_Exponent');
+b = behavModel(data2,'bias1_sensL_sensR_Exponent_perturbation');
 b.getPosterior;
 b.plotPosteriorMarginals;
 b.plotPsych;

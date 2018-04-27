@@ -11,6 +11,7 @@ data {
 	int<lower=0> numTestContrasts; //Number of query contrast points
 	vector<lower=0,upper=1>[numTestContrasts] testContrastLeft;
 	vector<lower=0,upper=1>[numTestContrasts] testContrastRight;
+	int<lower=0,upper=1> perturbation[numTrials];
 }
 parameters {
     real bias_left; // bias parameter
@@ -18,15 +19,25 @@ parameters {
     real<lower=0> sens_left; // sensitivity to left contrasts
 	real<lower=0> sens_right; // sensitivity to right contrasts
 	real<lower=0,upper=2> n_exp; //n exponent
+	real bias_left_perturbation;
+	real bias_right_perturbation;
+	real sens_left_perturbation;
+	real sens_right_perturbation;
+	real n_exp_perturbation;
 }
 transformed parameters {
   vector[3] z[numTrials];  // log odds LvNG
   
   for (n in 1:numTrials)
   {
-    z[n][1] = bias_left + sens_left*(contrastLeft[n]^n_exp); 
-	z[n][2] = bias_right + sens_right*(contrastRight[n]^n_exp); 
-	z[n][3] = 0;
+	if (perturbation[n]==1) {
+	    z[n][1] = (bias_left+bias_left_perturbation) + (sens_left+sens_left_perturbation)*(contrastLeft[n]^(n_exp+n_exp_perturbation)); 
+		z[n][2] = (bias_right+bias_right_perturbation) + (sens_right+sens_right_perturbation)*(contrastRight[n]^(n_exp+n_exp_perturbation)); 
+	} else {
+		z[n][1] = bias_left + sens_left*(contrastLeft[n]^n_exp); 
+		z[n][2] = bias_right + sens_right*(contrastRight[n]^n_exp); 
+	}
+		z[n][3] = 0;
   }
 }
 model {
@@ -35,6 +46,12 @@ model {
 	bias_right ~ normal(0, 5);
 	sens_left ~ normal(0, 20);
 	sens_right ~ normal(0, 20);
+	
+	bias_left_perturbation ~ normal(0, 5);
+	bias_right_perturbation ~ normal(0, 5);
+	sens_left_perturbation ~ normal(0, 5);
+	sens_right_perturbation ~ normal(0, 5);
+	n_exp_perturbation ~ normal(0, 5);
 	
 	for (n in 1:numTrials) {
 		choice[n] ~ categorical_logit( z[n] );

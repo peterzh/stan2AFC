@@ -27,21 +27,21 @@ model {
   bias_delta_perSession ~ normal(0, bias_delta_perSession_sd); //define hyperprior on bias deltas
   choice ~ bernoulli_logit( z );
 }
-generated quantities { //todo: modify to generate per-session fits
+generated quantities {
   vector[numTestContrasts] zTest[numSessions];
-  vector[numTestContrasts] pRTest[numSessions];
+  vector[numTestContrasts] pTest[numSessions];
   vector[numTestContrasts] zTestGrandAverage;
-  vector[numTestContrasts] pRTestGrandAverage;
+  vector[numTestContrasts] pTestGrandAverage;
   vector[numTrials] log_lik;
 
   for (sess in 1:numSessions)
   {
     zTest[sess] = bias + bias_delta_perSession[sess] + sens*(testContrastRight - testContrastLeft);
-    pRTest[sess] = exp(zTest[sess])./(1+exp(zTest[sess]));
+    pTest[sess] = exp(zTest[sess])./(1+exp(zTest[sess]));
   }
 
   zTestGrandAverage = bias + sens*(testContrastRight - testContrastLeft);
-  pRTestGrandAverage = exp(zTestGrandAverage)./(1+exp(zTestGrandAverage));
+  pTestGrandAverage = exp(zTestGrandAverage)./(1+exp(zTestGrandAverage));
 
   for (n in 1:numTrials){
     log_lik[n] = bernoulli_logit_lpmf(choice[n] | z[n]);
