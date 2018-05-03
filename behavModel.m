@@ -1,7 +1,7 @@
 classdef behavModel < handle
     properties(Access=public)
         modelName;
-        data;        
+        data;
         MAP;
         Posterior;
         PosteriorType;
@@ -42,7 +42,7 @@ classdef behavModel < handle
                 %Compile model
                 sm = StanModel('file',stanFile,'working_dir',tempdir);
                 sm.compile();
-               
+                
                 %Save copy of compiled model .mat object
                 save(modelFile,'sm');
             end
@@ -110,13 +110,13 @@ classdef behavModel < handle
                     CL = [CL; c; ones(size(c))*cVals(ped) ];
                     CR = [CR; ones(size(c))*cVals(ped); c];
                 end
-  
+                
                 obj.data_stan.numTestContrasts = numel(CL);
                 obj.data_stan.testContrastLeft = CL;
                 obj.data_stan.testContrastRight = CR;
             end
         end
-
+        
         function p = getMAP(obj)
             %Get maximum a-posteriori estimate of parameters
             fitObj = stan('fit',obj.stanModelObj,'method','optimize','data',obj.data_stan,'verbose',true);
@@ -132,7 +132,7 @@ classdef behavModel < handle
             %Fit model on data
             fitObj = stan('fit',obj.stanModelObj,'method','sample','data',obj.data_stan,'iter',1000,'chains',4,'verbose',true);
             fitObj.block;
-                        
+            
             %Get all parameter values
             p = fitObj.extract('permuted',false);
             
@@ -149,7 +149,7 @@ classdef behavModel < handle
             
             warning('TODO: Assess convergence');
             waic=mstan.waic(p1.log_lik);
-
+            
         end
         
         function p = getPosterior_Variational(obj)
@@ -170,7 +170,7 @@ classdef behavModel < handle
             if isempty(obj.Posterior)
                 error('posterior not estimated');
             end
-                        
+            
             p = obj.Posterior;
             pNames = fieldnames(p);
             p = rmfield(p, pNames(find(strcmp(pNames,'z')):end));
@@ -200,7 +200,7 @@ classdef behavModel < handle
         end
         
         function plotPosteriorMarginals(obj)
-
+            
             p = obj.Posterior;
             pNames = fieldnames(obj.Posterior);
             pNames(find(strcmp(pNames,'z')):end)=[];
@@ -209,8 +209,6 @@ classdef behavModel < handle
             ha = tight_subplot( ceil(length(pNames)/3), 3, 0.1, 0.05, 0.05);
             set(ha,'ycolor','none');
             for param = 1:length(pNames)
-%                 ha = subplot(length(pNames),1, param);
-                
                 temp = p.(pNames{param});
                 
                 hold(ha(param),'on');
@@ -225,22 +223,6 @@ classdef behavModel < handle
             
         end
         
-%         function ph = calculatePhat(~,Z,Posterior,contrasts)
-%              numTestContrasts = 40;
-%             testContrastLeft = [linspace(1,0,numTestContrasts/2)'; zeros(numTestContrasts/2,1)];
-%              testContrastRight = [zeros(numTestContrasts/2,1); linspace(0,1,numTestContrasts/2)'];
-%              
-%              
-%              for iter = 1:length(Posterior.bias)
-%                  z1 = Z{1}(Posterior.bias(iter), Posterior.sens(iter), testContrastRight,testContrastLeft);
-%                  pR = exp(z1)./(1+exp(z1));
-%                  
-%              end
-%             
-%             
-%             keyboard;
-%         end
-        
         function plotPsych(obj)
             %Plot psychometric data/curves. Plotting depends on the model
             %hierarchy type
@@ -252,7 +234,7 @@ classdef behavModel < handle
             ps = [];
             if ~isempty(p)
                 fprintf('Posterior estimation: %s\n',obj.PosteriorType);
-%                 ph = obj.calculatePhat(obj.Z,p,'detection');
+                %                 ph = obj.calculatePhat(obj.Z,p,'detection');
                 
                 %Query contrast points
                 ps = struct;
@@ -263,21 +245,21 @@ classdef behavModel < handle
             %Different plots depending on the hierarchy type
             switch(obj.data_type.hierarchy)
                 case 'none' %No hierarchy, just fit all data in a single model
-                     
+                    
                     fig = figure('color','w','name',obj.modelName);
                     ha=axes;
                     obj.util_plotDetection(ha, obj.data_stan, ps);
-%                     obj.util_plotDiscrimination(ha, obj.data_stan, ps);
-
+                    %                     obj.util_plotDiscrimination(ha, obj.data_stan, ps);
+                    
                 case 'perSession' %Per-session deviations
                     %Make a plot for each session, if there aren't too many
                     %sessions, and then make a plot for the grand average
-                                        
+                    
                     fig = figure('color','w','units','normalized','position',[0.2131 0.0524 0.4530 0.8495],'name',obj.modelName);
                     numEdgePlots = ceil(sqrt(obj.data_stan.numSessions));
                     ha = tight_subplot( numEdgePlots, numEdgePlots, 0.02, [0.4 0.03], 0.01);
                     for session = 1:obj.data_stan.numSessions
-
+                        
                         %Get subset data
                         sessIdx = obj.data_stan.sessionID==session;
                         data_subset = struct('testContrastLeft',obj.data_stan.testContrastLeft,...
@@ -289,10 +271,10 @@ classdef behavModel < handle
                         ps_thisSess = [];
                         if ~isempty(ps)
                             ps_thisSess = struct('interval', permute(ps.interval(:,:,session,:), [1 2 4 3] ),...
-                                                 'mean', permute(ps.mean(:,:,session,:), [1 2 4 3]) );
+                                'mean', permute(ps.mean(:,:,session,:), [1 2 4 3]) );
                         end
                         obj.util_plotDetection(ha(session), data_subset, ps_thisSess );
-%                         obj.util_plotDiscrimination(ha(session), data_subset, ps_thisSess);
+                        %                         obj.util_plotDiscrimination(ha(session), data_subset, ps_thisSess);
                         
                         xlabel(ha(session),''); ylabel(ha(session),'');
                         set(ha(session),'xtick','','ytick','');
@@ -302,20 +284,57 @@ classdef behavModel < handle
                     
                     %Create grand average plot
                     ha = tight_subplot( 1, 1, 0.01, [0.05 0.6], 0.1);
-
+                    
                     ps_grandAv = [];
                     if ~isempty(ps)
                         ps_grandAv = struct('interval', quantile(p.pTestGrandAverage,credible_interval,1),...
                             'mean', mean(p.pTestGrandAverage,1) );
                     end
                     obj.util_plotDetection(ha, obj.data_stan, ps_grandAv);
-%                     obj.util_plotDiscrimination(ha, obj.data_stan, ps_grandAv);
+                    %                     obj.util_plotDiscrimination(ha, obj.data_stan, ps_grandAv);
                     title(ha,'grand average (pooled data across sessions)');
                     
                 otherwise %Per session & per subject deviations
-                    error('Not coded. Need prediction from model'); 
+                    fig = figure('color','w','units','normalized','position',[0.2131 0.0524 0.4530 0.8495],'name',obj.modelName);
+                    numEdgePlots = ceil(sqrt(obj.data_stan.numSubjects));
+                    ha = tight_subplot( numEdgePlots, numEdgePlots, 0.02, [0.4 0.03], 0.01);
+                    for subj = 1:obj.data_stan.numSubjects
+                        
+                        %Get subset data
+                        subjIdx = obj.data_stan.subjectID==subj;
+                        data_subset = struct('testContrastLeft',obj.data_stan.testContrastLeft,...
+                            'testContrastRight',obj.data_stan.testContrastRight,...
+                            'contrastLeft',obj.data_stan.contrastLeft(subjIdx),...
+                            'contrastRight',obj.data_stan.contrastRight(subjIdx),...
+                            'choice',obj.data_stan.choice(subjIdx));
+                        
+                        ps_thisSubj = [];
+                        if ~isempty(ps)
+                            ps_thisSubj = struct('interval', quantile(p.pTestSubjectAverage(:,:,subj),credible_interval,1),...
+                                'mean', mean(p.pTestSubjectAverage(:,:,subj),1) );
+                        end
+                        obj.util_plotDetection(ha(subj), data_subset, ps_thisSubj );
+                        %                         obj.util_plotDiscrimination(ha(session), data_subset, ps_thisSess);
+                        
+                        xlabel(ha(subj),''); ylabel(ha(subj),'');
+                        set(ha(subj),'xtick','','ytick','');
+                        title(ha(subj),sprintf('subject %d',subj));
+                    end
+                    delete(ha(subj+1:end))
+                    
+                    %Create grand average plot
+                    ha = tight_subplot( 1, 1, 0.01, [0.05 0.6], 0.1);
+                    
+                    ps_grandAv = [];
+                    if ~isempty(ps)
+                        ps_grandAv = struct('interval', quantile(p.pTestGrandAverage,credible_interval,1),...
+                            'mean', mean(p.pTestGrandAverage,1) );
+                    end
+                    obj.util_plotDetection(ha, obj.data_stan, ps_grandAv);
+                    %                     obj.util_plotDiscrimination(ha, obj.data_stan, ps_grandAv);
+                    title(ha,'grand average (pooled data across sessions)');     
             end
-
+            
             
         end
         
@@ -329,7 +348,7 @@ classdef behavModel < handle
             bounds = get(axis_handle,'position');
             
             %Delete original axis
-%             axis_handle.delete;
+            %             axis_handle.delete;
             set(axis_handle,'xcolor','none','ycolor','none');
             
             %replace with many subplots within the bounds of the original
@@ -414,16 +433,16 @@ classdef behavModel < handle
                 [cDiff, sortIdx]=sort(cDiff);
                 Posterior.interval = Posterior.interval(:,sortIdx,:);
                 Posterior.mean = Posterior.mean(:,sortIdx,:);
-
+                
                 if size(Posterior.interval,3)==1
                     fx = fill(axis_handle,[cDiff; flipud(cDiff)], [Posterior.interval(2,:) fliplr( Posterior.interval(1,:) ) ], 'k');
                     fx.EdgeAlpha=0;
                     fx.FaceColor = [1 1 1]*0.8;
                     
                     plot(axis_handle,cDiff, Posterior.mean, '-');
-
+                    
                 elseif size(Posterior.interval,3)==3
-
+                    
                     for r = 1:3
                         fx = fill(axis_handle,[cDiff; flipud(cDiff)], [Posterior.interval(2,:,r) fliplr( Posterior.interval(1,:,r) ) ], 'k');
                         fx.FaceAlpha=0.3;
@@ -463,7 +482,7 @@ classdef behavModel < handle
             ylabel(axis_handle,'pR');
             xlabel(axis_handle,'CR - CL');
             hold(axis_handle,'off');
-%             set(axis_handle,'dataaspectratio',[1 1 1]);
+            %             set(axis_handle,'dataaspectratio',[1 1 1]);
         end
         
     end
