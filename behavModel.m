@@ -34,10 +34,10 @@ classdef behavModel < handle
                 %Get stan model file
                 stanFile = strrep(modelFile, '.mat', '.stan');
                 
-                %Get Z function
-                fid = fopen(stanFile);
-                text = textscan(fid, '%s'); text = strjoin(text{1},' ');
-                fclose(fid);
+%                 %Get Z function
+%                 fid = fopen(stanFile);
+%                 text = textscan(fid, '%s'); text = strjoin(text{1},' ');
+%                 fclose(fid);
                 
                 %Compile model
                 sm = StanModel('file',stanFile,'working_dir',tempdir);
@@ -462,14 +462,14 @@ classdef behavModel < handle
                 [ph,pci] = binofit(sum([resp==1 resp==2 resp==3],1),length(resp));
                 
                 if max(dataStruct.choice)==2 %Forced choice
-                    L=line(axis_handle,[1 1]*cVals(c),pci(2,:));
-                    set(L,'Color',[1 1 1]*0,'Linewidth',0.5);
+%                     L=line(axis_handle,[1 1]*cVals(c),pci(2,:));
+%                     set(L,'Color',[1 1 1]*0,'Linewidth',0.5);
                     plot(axis_handle,cVals(c),ph(2),'.','markersize',20,'color',[1 1 1]*0);
                 elseif max(dataStruct.choice)==3 %Unforced choice
                     
                     for r = 1:3
-                        L=line(axis_handle,[1 1]*cVals(c),pci(r,:));
-                        set(L,'Color',colours(r,:),'Linewidth',0.5);
+%                         L=line(axis_handle,[1 1]*cVals(c),pci(r,:));
+%                         set(L,'Color',colours(r,:),'Linewidth',0.5);
                         plot(axis_handle,cVals(c),ph(r),'.','markersize',20,'color',colours(r,:));
                     end
                     
