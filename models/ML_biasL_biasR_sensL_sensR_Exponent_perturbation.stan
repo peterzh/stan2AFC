@@ -42,16 +42,16 @@ transformed parameters {
 }
 model {
 	//priors, help with MNL models
-	bias_left ~ normal(0, 5);
-	bias_right ~ normal(0, 5);
+	bias_left ~ normal(0, 10);
+	bias_right ~ normal(0, 10);
 	sens_left ~ normal(0, 20);
 	sens_right ~ normal(0, 20);
 	
-	bias_left_perturbation ~ normal(0, 5);
-	bias_right_perturbation ~ normal(0, 5);
-	sens_left_perturbation ~ normal(0, 5);
-	sens_right_perturbation ~ normal(0, 5);
-	n_exp_perturbation ~ normal(0, 5);
+	bias_left_perturbation ~ normal(0, 10);
+	bias_right_perturbation ~ normal(0, 10);
+	sens_left_perturbation ~ normal(0, 10);
+	sens_right_perturbation ~ normal(0, 10);
+	n_exp_perturbation ~ normal(0, 10);
 	
 	for (n in 1:numTrials) {
 		choice[n] ~ categorical_logit( z[n] );
@@ -60,6 +60,8 @@ model {
 generated quantities {
   vector[3] zTest[numTestContrasts];
   vector[3] pTest[numTestContrasts];
+  vector[3] zTest_perturbation[numTestContrasts];
+  vector[3] pTest_perturbation[numTestContrasts];
   vector[numTrials] log_lik;
 
   for (c in 1:numTestContrasts)
@@ -68,6 +70,11 @@ generated quantities {
 		zTest[c][2] = bias_right + sens_right*(testContrastRight[c]^n_exp); 
 		zTest[c][3] = 0;
 		pTest[c] = softmax( zTest[c] );
+		
+		zTest_perturbation[c][1] = bias_left + bias_left_perturbation + (sens_left+sens_left_perturbation)*(testContrastLeft[c]^(n_exp+n_exp_perturbation)); 
+		zTest_perturbation[c][2] = bias_right + bias_right_perturbation + (sens_right+sens_right_perturbation)*(testContrastRight[c]^(n_exp+n_exp_perturbation)); 
+		zTest_perturbation[c][3] = 0;
+		pTest_perturbation[c] = softmax( zTest_perturbation[c] );
 	}
 
   for (n in 1:numTrials){

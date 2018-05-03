@@ -10,6 +10,7 @@ data {
 	int<lower=0> numTestContrasts; //Number of query contrast points
 	vector<lower=0,upper=1>[numTestContrasts] testContrastLeft;
 	vector<lower=0,upper=1>[numTestContrasts] testContrastRight;
+	int<lower=0,upper=1> perturbation[numTrials];
 }
 transformed data {
 	int<lower=0,upper=1> choiceR[numTrials]; // 0=Left, 1=Right
