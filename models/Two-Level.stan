@@ -24,8 +24,7 @@ parameters {
 	vector<lower=0>[5] sd_subj;
 	matrix[5,numSubjects] z_subj; 
 	cholesky_factor_corr[5] rho_subj; 
-	
-}
+	}
 transformed parameters {
 	vector[3] logOdds[numTrials]; // ln pL/pNG, ln pR/pNG, ln pNG/pNG
 	matrix[5,numSessions] b_sess;
@@ -50,7 +49,7 @@ transformed parameters {
 			BR = bias[2] + b_sess[2,sessionID[n]] + b_subj[2,subjectID[n]];
 			SL = sens[1] + b_sess[3,sessionID[n]] + b_subj[3,subjectID[n]];
 			SR = sens[2] + b_sess[4,sessionID[n]] + b_subj[4,subjectID[n]];
-			N = n_exp    + b_sess[5,sessionID[n]] + b_subj[5,subjectID[n]];
+			N = n_exp 	 + b_sess[5,sessionID[n]] + b_subj[5,subjectID[n]];
 
 			logOdds[n][1] = BL + SL*contrastLeft[n]^N;		
 			logOdds[n][2] = BR + SR*contrastRight[n]^N;
@@ -75,7 +74,7 @@ model {
 	//prior on the cholesky factor of the covariance matrix
 	rho_sess ~ lkj_corr_cholesky(2.0); //penalises extreme correlations between the deviations
 	rho_subj ~ lkj_corr_cholesky(2.0); //penalises extreme correlations between the deviations
-	
+
 	for (n in 1:numTrials) {
 		choice[n] ~ categorical_logit( logOdds[n] );
 	}
@@ -84,7 +83,7 @@ generated quantities {
 	corr_matrix[5] corr_sess;
 	corr_matrix[5] corr_subj;
 	vector[numTrials] log_lik;
-
+	
 	//write correlation matrix
 	corr_sess = rho_sess * rho_sess';
 	corr_subj = rho_subj * rho_subj';
