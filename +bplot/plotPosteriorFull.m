@@ -1,6 +1,7 @@
         function plotPosteriorFull(p)
             pNames = fieldnames(p);
             p = rmfield(p, pNames(find(strcmp(pNames,'z')):end));
+            p = rmfield(p, pNames(find(strcmp(pNames,'log_lik')):end));
             pNames = fieldnames(p);
             
             %Expand the param labels if any variable in the posterior

@@ -2,17 +2,12 @@ function fit = fitModel(modelName,data)
 %modelname: string
 %data: struct
 
-%Choose where to save the fit
-root_dir = fullfile( fileparts(mfilename('fullpath')),'..' , 'fits');
-[file,pathname] = uiputfile(fullfile(root_dir,'*.mat'));
-file = fullfile(pathname,file);
-
 %Get model object
 stanModelObj = bfit.getCompiledModel(modelName);
 
 %Prepare the dataset to be compatible with stan
 %Convert data structure to stan data format
-data.numTrials = length(data.contrastLeft);
+data.numTrials = length(data.choice);
 
 if isfield(data,'sessionID')
     data.numSessions = max(data.sessionID);
@@ -23,6 +18,7 @@ if isfield(data,'subjectID')
     data.numSubjects = max(data.subjectID);
     assert(min(data.subjectID)==1,'subjectID does not start at 1');
     ss = unique([data.subjectID data.sessionID],'rows');
+    ss = sortrows(ss,2);
     data.subjID_session = ss(:,1);
 end
 
@@ -33,6 +29,11 @@ end
 
 if isfield(data,'perturbationTime')
     assert( all(diff(data.perturbationTime(data.perturbation==1))>=0), 'Trials must be ordered by perturbation time'); 
+end
+
+if isfield(data,'firing_rate')
+    assert( ~any(isnan(data.firing_rate(:))), 'firing_rate contains NaN values');
+    data.numNeurons = size(data.firing_rate,2);
 end
 
 %Get posterior
@@ -64,5 +65,9 @@ fit.modelName = modelName;
 fit.posterior = posterior;
 fit.data = data;
 
-save(file,'-struct','fit','-v7.3');
+savePath = [tempname('C:\Users\Peter\Documents\MATLAB\stan2AFC\fits') '.mat'];
+save(savePath,'-struct','fit','-v7.3');
+disp('Saved to:');
+disp(savePath);
+
 end
