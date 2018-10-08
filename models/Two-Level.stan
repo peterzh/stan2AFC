@@ -16,19 +16,19 @@ parameters {
 	real<lower=0> n_exp;
 	
 	//per session deviations 
-	vector<lower=0>[5] sd_sess;
-	matrix[5,numSessions] z_sess; //standard normal variable used to draw from the covariance matrix
-	cholesky_factor_corr[5] rho_sess; //correlations of deviations
+	vector<lower=0>[4] sd_sess;
+	matrix[4,numSessions] z_sess; //standard normal variable used to draw from the covariance matrix
+	cholesky_factor_corr[4] rho_sess; //correlations of deviations
 	
 	//per subject deviations
-	vector<lower=0>[5] sd_subj;
-	matrix[5,numSubjects] z_subj; 
-	cholesky_factor_corr[5] rho_subj; 
+	vector<lower=0>[4] sd_subj;
+	matrix[4,numSubjects] z_subj; 
+	cholesky_factor_corr[4] rho_subj; 
 	}
 transformed parameters {
 	vector[3] logOdds[numTrials]; // ln pL/pNG, ln pR/pNG, ln pNG/pNG
-	matrix[5,numSessions] b_sess;
-	matrix[5,numSubjects] b_subj;
+	matrix[4,numSessions] b_sess;
+	matrix[4,numSubjects] b_subj;
 	
 	//draw samples of sess and subj deviations, according to the covariance structure in rho_ & sd_
 	b_sess = diag_pre_multiply(sd_sess, rho_sess) * z_sess;
@@ -40,7 +40,7 @@ transformed parameters {
 		real BR;
 		real SL;
 		real SR;
-		real N;
+		real N_EXP;
 		
 		//compute (non)linear model
 		for (n in 1:numTrials)
@@ -49,10 +49,10 @@ transformed parameters {
 			BR = bias[2] + b_sess[2,sessionID[n]] + b_subj[2,subjectID[n]];
 			SL = sens[1] + b_sess[3,sessionID[n]] + b_subj[3,subjectID[n]];
 			SR = sens[2] + b_sess[4,sessionID[n]] + b_subj[4,subjectID[n]];
-			N = n_exp 	 + b_sess[5,sessionID[n]] + b_subj[5,subjectID[n]];
+			N_EXP = n_exp; //+ b_sess[5,sessionID[n]] + b_subj[5,subjectID[n]];
 
-			logOdds[n][1] = BL + SL*contrastLeft[n]^N;		
-			logOdds[n][2] = BR + SR*contrastRight[n]^N;
+			logOdds[n][1] = BL + SL*contrastLeft[n]^N_EXP;
+			logOdds[n][2] = BR + SR*contrastRight[n]^N_EXP;
 			logOdds[n][3] = 0;
 		}
 	}
@@ -80,8 +80,8 @@ model {
 	}
 }
 generated quantities {
-	corr_matrix[5] corr_sess;
-	corr_matrix[5] corr_subj;
+	corr_matrix[4] corr_sess;
+	corr_matrix[4] corr_subj;
 	vector[numTrials] log_lik;
 	
 	//write correlation matrix
