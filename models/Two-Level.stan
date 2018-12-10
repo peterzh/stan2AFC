@@ -83,6 +83,7 @@ generated quantities {
 	corr_matrix[4] corr_sess;
 	corr_matrix[4] corr_subj;
 	vector[numTrials] log_lik;
+
 	
 	//write correlation matrix
 	corr_sess = rho_sess * rho_sess';

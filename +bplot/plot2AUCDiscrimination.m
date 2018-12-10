@@ -8,6 +8,8 @@ if ~isfield(data,'perturbation')
     data.perturbation = zeros(size(data.choice));
 end
 
+%% Plot model fit for each session
+
 %Transform to pedestal/diff representation
 data.pedestal = min(data.contrastLeft,data.contrastRight);
 data.cDiff = data.contrastRight - data.contrastLeft;
@@ -20,7 +22,7 @@ data.cDiff = data.contrastRight - data.contrastLeft;
 prob = counts./sum(counts,3);%Convert to probability over choices
 prob_ave = nanmean(prob,5);
 
-%Plot model fit for each session
+
 cdiffs = cellfun(@str2num,labels(1:size(prob,1),1));
 peds = cellfun(@str2num,labels(1:size(prob,2),2));
 
@@ -134,7 +136,7 @@ end
 % set(get(f,'children'),'xlim',[-1 1]*1,'ylim',[0 1]);
 
 
-%Plot grand average
+%% Plot grand average
 
 %Parameters of the 'average session'
 BL = posterior.bias(:,1) ;
@@ -181,6 +183,97 @@ for ped = 1:length(peds)
     
 end
 set(get(f,'children'),'xlim',[-1 1]*1,'ylim',[0 1]);
+
+%% Plot grand average mesh plots
+c2 = crosstab(data.contrastLeft,...
+    data.contrastRight,...
+    data.choice,...
+    data.perturbation,...
+    data.sessionID);
+prob = c2./sum(c2,3);%Convert to probability over choices
+prob_ave = nanmean(prob,5); %average over sessions
+
+CLs = unique(data.contrastLeft);
+CRs = unique(data.contrastRight);
+
+DotSize = 32;
+openDotSize = 9;
+
+f = figure('color','w');
+ha = tight_subplot(1,3,0.1,0.1,0.1);
+for i = 1:3; hold(ha(i),'on'); end;
+
+j = 1;
+for r = [1 3 2]
+    CLGrid = repmat(CLs,1,4);
+    CRGrid = repmat(CRs,1,4)';
+    PGrid = prob_ave(:,:,r,1);
+    
+    plot3(ha(j),CLGrid, CRGrid, PGrid, 'k--', 'color', colours(r,:));
+    plot3(ha(j),CLGrid', CRGrid', PGrid', 'k--', 'color', colours(r,:));
+    xlabel(ha(j),'CL'); ylabel(ha(j),'CR'); grid(ha(j),'on');
+    
+    %Marker based on whether choice is correct
+    if r == 1
+        plot3(ha(j), CLGrid(CLGrid>CRGrid), CRGrid(CLGrid>CRGrid), PGrid(CLGrid(:)>CRGrid(:)), 'k.' ,'markersize', DotSize, 'color', colours(r,:));
+        plot3(ha(j), CLGrid(CRGrid>CLGrid), CRGrid(CRGrid>CLGrid), PGrid(CRGrid(:)>CLGrid(:)), 'ko' ,'markersize', openDotSize,'color', colours(r,:) );
+        plot3(ha(j), CLGrid(CLGrid==CRGrid & CLGrid>0), CRGrid(CLGrid==CRGrid & CLGrid>0), PGrid(CLGrid(:)==CRGrid(:) & CLGrid(:)>0), 'k.' ,'markersize', DotSize, 'color', hsv2rgb( rgb2hsv(colours(r,:)).*[1 0.5 1] )  );
+        plot3(ha(j), CLGrid(CLGrid==0 & CRGrid==0), CRGrid(CLGrid==0 & CRGrid==0), PGrid(CLGrid(:)==0 & CRGrid(:)==0), 'ko' ,'markersize', openDotSize,'color', colours(r,:) );
+
+    elseif r == 2
+        plot3(ha(j), CLGrid(CLGrid<CRGrid), CRGrid(CLGrid<CRGrid), PGrid(CLGrid(:)<CRGrid(:)), 'k.' ,'markersize', DotSize, 'color', colours(r,:));
+        plot3(ha(j), CLGrid(CRGrid<CLGrid), CRGrid(CRGrid<CLGrid), PGrid(CRGrid(:)<CLGrid(:)), 'ko' ,'markersize', openDotSize, 'color', colours(r,:));
+        plot3(ha(j), CLGrid(CLGrid==CRGrid & CLGrid>0), CRGrid(CLGrid==CRGrid & CLGrid>0), PGrid(CLGrid(:)==CRGrid(:) & CRGrid(:)>0), 'k.' ,'markersize', DotSize, 'color', hsv2rgb( rgb2hsv(colours(r,:)).*[1 0.5 1] )  );
+        plot3(ha(j), CLGrid(CLGrid==0 & CRGrid==0), CRGrid(CLGrid==0 & CRGrid==0), PGrid(CLGrid(:)==0 & CRGrid(:)==0), 'ko' ,'markersize', openDotSize,'color', colours(r,:) );
+
+    elseif r == 3
+        plot3(ha(j), CLGrid(CLGrid==0 & CRGrid==0), CRGrid(CLGrid==0 & CRGrid==0), PGrid(CLGrid(:)==0 & CRGrid(:)==0), 'k.' ,'markersize', DotSize, 'color', colours(r,:));
+        plot3(ha(j), CLGrid(CLGrid>0 | CRGrid>0), CRGrid(CLGrid>0 | CRGrid>0), PGrid(CRGrid(:)>0 | CLGrid(:)>0), 'ko' ,'markersize', openDotSize, 'color', colours(r,:));
+    end
+
+    j = j +1;
+end
+
+for cl = 1:4
+    CL = ones(1,100)*CLs(cl);
+    CR = linspace(0,0.54,100);
+    ph=bplot.CN(BL,SL,BR,SR,N,CL,CR);
+    ph = permute( mean(ph,1), [2 3 1] );
+    j = 1;
+    for r = [1 3 2]
+        plot3(ha(j),CL,CR, ph(:,r), '-', 'color', colours(r,:));
+        j = j +1;
+    end
+end
+
+
+for cr = 1:4
+    CR = ones(1,100)*CRs(cr);
+    CL = linspace(0,0.54,100);
+    ph=bplot.CN(BL,SL,BR,SR,N,CL,CR);
+    ph = permute( mean(ph,1), [2 3 1] );
+    j = 1;
+    for r = [1 3 2]
+        plot3(ha(j),CL,CR, ph(:,r), '-', 'color', colours(r,:));
+        j = j +1;
+    end
+end
+set(ha, 'xticklabelmode','auto',...
+        'xtick', CLs,...
+        'yticklabelmode','auto',...
+        'ytick', CRs,...
+        'xlim', [0 0.54],...
+        'ylim', [0 0.54],...
+        'zlim',[0 1],...
+        'tickdir','out');
+set(ha,'xdir','reverse'); 
+set(ha(1),'view',[-160,45]);
+set(ha(2),'view',[-135,45]);
+set(ha(3),'view',[-110,45]);
+
+title(ha(1),'Left');
+title(ha(2),'NoGo');
+title(ha(3),'Right');
 
 %% Plot CN function
 c = linspace(0,1,1000);
